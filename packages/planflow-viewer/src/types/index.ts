@@ -1,12 +1,101 @@
-// Re-export types from mcp-planflow
-export type { 
-  PlanDTO, 
-  StepDTO, 
-  CreatePlanInputDTO,
-  UpdatePlanInputDTO,
-  PlanMetadataDTO,
-  StepMetadataDTO
-} from '../../../mcp-planflow/src/application/dtos';
+// Types from backend (duplicated for frontend independence)
+export interface StepCommentDTO {
+  id: string;
+  stepId: string;
+  content: string;
+  author?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface PlanCommentDTO {
+  id: string;
+  content: string;
+  author?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface StepDTO {
+  id: string;
+  title: string;
+  description: string;
+  kind: string;
+  status: string;
+  dependsOn: string[];
+  estimatedDuration?: {
+    value: number;
+    unit: string;
+  };
+  actions: any[];
+  validation?: {
+    criteria: string[];
+    automatedTests?: string[];
+  };
+  comments?: StepCommentDTO[];
+}
+
+export interface PlanDTO {
+  planId: string;
+  schemaVersion: string;
+  planType: string;
+  status?: string;
+  metadata: {
+    title: string;
+    description: string;
+    author?: string;
+    createdAt: string;
+    updatedAt: string;
+    tags?: string[];
+    revision: number;
+  };
+  plan: {
+    objective: string;
+    scope: string;
+    constraints?: string[];
+    assumptions?: string[];
+    successCriteria?: string[];
+  };
+  steps: StepDTO[];
+  createdAt: string;
+  updatedAt: string;
+  revision: number;
+}
+
+export interface CreatePlanInputDTO {
+  plan: Record<string, unknown>;
+  source?: string;
+}
+
+export interface UpdatePlanInputDTO {
+  metadata?: Partial<PlanDTO['metadata']>;
+  plan?: Partial<PlanDTO['plan']>;
+  steps?: StepDTO[];
+}
+
+export interface PlanMetadataDTO {
+  title: string;
+  description: string;
+  author?: string;
+  createdAt: string;
+  updatedAt: string;
+  tags?: string[];
+  revision: number;
+}
+
+export interface StepMetadataDTO {
+  estimatedDuration?: {
+    value: number;
+    unit: string;
+  };
+}
+
+export interface PlanFilters {
+  planType?: string;
+  status?: string;
+  limit?: number;
+  offset?: number;
+}
 
 // Local viewer types
 export interface FlowNode {

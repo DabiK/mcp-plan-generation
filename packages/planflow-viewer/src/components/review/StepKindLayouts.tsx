@@ -37,7 +37,7 @@ export function CreateFileLayout({ step }: StepKindLayoutProps) {
       )}
 
       {(action?.content || action?.payload?.content) && (
-        <CodeDiff after={action?.content || action?.payload?.content} />
+        <CodeDiff after={action?.content || action?.payload?.content} filename={action?.filePath || action?.payload?.file || action?.payload?.path} />
       )}
     </div>
   );
@@ -82,7 +82,7 @@ export function EditFileLayout({ step }: StepKindLayoutProps) {
         </div>
       )}
 
-      <CodeDiff before={action?.before} after={action?.after} />
+      <CodeDiff before={action?.before} after={action?.after} filename={action?.filePath || action?.payload?.file} />
     </div>
   );
 }

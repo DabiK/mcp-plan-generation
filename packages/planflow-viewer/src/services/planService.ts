@@ -78,4 +78,87 @@ export const planService = {
     const data = await res.json();
     return data.plans || data; // Support both response formats
   },
+
+  async addStepComment(planId: string, stepId: string, content: string, author?: string) {
+    const res = await fetch(`${API_BASE}/api/plans/${planId}/steps/${stepId}/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content, author }),
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.message || 'Failed to add comment');
+    }
+    return res.json();
+  },
+
+  async updateStepComment(planId: string, stepId: string, commentId: string, content: string) {
+    const res = await fetch(`${API_BASE}/api/plans/${planId}/steps/${stepId}/comments/${commentId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.message || 'Failed to update comment');
+    }
+    return res.json();
+  },
+
+  async deleteStepComment(planId: string, stepId: string, commentId: string) {
+    const res = await fetch(`${API_BASE}/api/plans/${planId}/steps/${stepId}/comments/${commentId}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.message || 'Failed to delete comment');
+    }
+    return res.json();
+  },
+
+  async getPlanComments(planId: string) {
+    const res = await fetch(`${API_BASE}/api/plans/${planId}/comments`);
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.message || 'Failed to get plan comments');
+    }
+    return res.json();
+  },
+
+  async addPlanComment(planId: string, content: string, author?: string) {
+    const res = await fetch(`${API_BASE}/api/plans/${planId}/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content, author }),
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.message || 'Failed to add plan comment');
+    }
+    return res.json();
+  },
+
+  async updatePlanComment(planId: string, commentId: string, content: string) {
+    const res = await fetch(`${API_BASE}/api/plans/${planId}/comments/${commentId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.message || 'Failed to update plan comment');
+    }
+    return res.json();
+  },
+
+  async deletePlanComment(planId: string, commentId: string) {
+    const res = await fetch(`${API_BASE}/api/plans/${planId}/comments/${commentId}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.message || 'Failed to delete plan comment');
+    }
+    return res.json();
+  },
 };

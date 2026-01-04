@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { PlanReviewState, StepReview, StepComment, ReviewDecision } from '@/types';
+import { planService } from '@/services/planService';
 
 const STORAGE_PREFIX = 'planflow_review_';
 
@@ -48,48 +49,154 @@ export function useStepReviews(planId: string) {
     }));
   }, []);
 
-  const addComment = useCallback((stepId: string, content: string) => {
-    const comment: StepComment = {
-      id: `comment_${Date.now()}`,
-      stepId,
-      content,
-      timestamp: new Date().toISOString(),
-    };
+  const addComment = useCallback(async (stepId: string, content: string) => {
+    try {
+      // Call backend API to persist comment
+      const result = await planService.addStepComment(planId, stepId, content);
+      
+      if (result.success && result.comment) {
+        const comment: StepComment = {
+          id: result.comment.id,
+          stepId,
+          content: result.comment.content,
+          timestamp: result.comment.createdAt,
+        };
 
-    setReviewState((prev) => {
-      const existingReview = prev.reviews[stepId];
-      return {
-        ...prev,
-        reviews: {
-          ...prev.reviews,
-          [stepId]: {
-            stepId,
-            decision: existingReview?.decision || 'skipped',
-            comments: [...(existingReview?.comments || []), comment],
-            timestamp: existingReview?.timestamp || new Date().toISOString(),
-          },
-        },
+        setReviewState((prev) => {
+          const existingReview = prev.reviews[stepId];
+          return {
+            ...prev,
+            reviews: {
+              ...prev.reviews,
+              [stepId]: {
+                stepId,
+                decision: existingReview?.decision || 'skipped',
+                comments: [...(existingReview?.comments || []), comment],
+                timestamp: existingReview?.timestamp || new Date().toISOString(),
+              },
+            },
+          };
+        });
+      }
+    } catch (error) {
+      console.error('Failed to add comment:', error);
+      // Fallback to localStorage on error
+      const comment: StepComment = {
+        id: `comment_${Date.now()}`,
+        stepId,
+        content,
+        timestamp: new Date().toISOString(),
       };
-    });
-  }, []);
 
-  const deleteComment = useCallback((stepId: string, commentId: string) => {
-    setReviewState((prev) => {
-      const review = prev.reviews[stepId];
-      if (!review) return prev;
-
-      return {
-        ...prev,
-        reviews: {
-          ...prev.reviews,
-          [stepId]: {
-            ...review,
-            comments: review.comments.filter((c) => c.id !== commentId),
+      setReviewState((prev) => {
+        const existingReview = prev.reviews[stepId];
+        return {
+          ...prev,
+          reviews: {
+            ...prev.reviews,
+            [stepId]: {
+              stepId,
+              decision: existingReview?.decision || 'skipped',
+              comments: [...(existingReview?.comments || []), comment],
+              timestamp: existingReview?.timestamp || new Date().toISOString(),
+            },
           },
-        },
-      };
-    });
-  }, []);
+        };
+      });
+    }
+  }, [planId]);
+
+  const deleteComment = useCallback(async (stepId: string, commentId: string) => {
+    try {
+      // Call backend API to delete comment
+      await planService.deleteStepComment(planId, stepId, commentId);
+      
+      setReviewState((prev) => {
+        const review = prev.reviews[stepId];
+        if (!review) return prev;
+
+        return {
+          ...prev,
+          reviews: {
+            ...prev.reviews,
+            [stepId]: {
+              ...review,
+              comments: review.comments.filter((c) => c.id !== commentId),
+            },
+          },
+        };
+      });
+    } catch (error) {
+      console.error('Failed to delete comment:', error);
+      // Still remove from local state on error
+      setReviewState((prev) => {
+        const review = prev.reviews[stepId];
+        if (!review) return prev;
+
+        return {
+          ...prev,
+          reviews: {
+            ...prev.reviews,
+            [stepId]: {
+              ...review,
+              comments: review.comments.filter((c) => c.id !== commentId),
+            },
+          },
+        };
+      });
+    }
+  }, [planId]);
+
+  const updateComment = useCallback(async (stepId: string, commentId: string, content: string) => {
+    try {
+      // Call backend API to update comment
+      const result = await planService.updateStepComment(planId, stepId, commentId, content);
+      
+      if (result.success) {
+        setReviewState((prev) => {
+          const review = prev.reviews[stepId];
+          if (!review) return prev;
+
+          return {
+            ...prev,
+            reviews: {
+              ...prev.reviews,
+              [stepId]: {
+                ...review,
+                comments: review.comments.map((c) =>
+                  c.id === commentId
+                    ? { ...c, content, timestamp: new Date().toISOString() }
+                    : c
+                ),
+              },
+            },
+          };
+        });
+      }
+    } catch (error) {
+      console.error('Failed to update comment:', error);
+      // Still update local state on error (optimistic update)
+      setReviewState((prev) => {
+        const review = prev.reviews[stepId];
+        if (!review) return prev;
+
+        return {
+          ...prev,
+          reviews: {
+            ...prev.reviews,
+            [stepId]: {
+              ...review,
+              comments: review.comments.map((c) =>
+                c.id === commentId
+                  ? { ...c, content, timestamp: new Date().toISOString() }
+                  : c
+              ),
+            },
+          },
+        };
+      });
+    }
+  }, [planId]);
 
   const setCurrentStepIndex = useCallback((index: number) => {
     setReviewState((prev) => ({
@@ -147,6 +254,7 @@ export function useStepReviews(planId: string) {
     reviewState,
     addReview,
     addComment,
+    updateComment,
     deleteComment,
     setCurrentStepIndex,
     nextStep,

@@ -18,10 +18,12 @@ interface StepReviewCardProps {
   existingReview?: StepReview;
   onDecision: (decision: ReviewDecision) => void;
   onAddComment: (content: string) => void;
+  onUpdateComment?: (commentId: string, content: string) => void;
   onDeleteComment: (commentId: string) => void;
   onNext: () => void;
   onPrevious: () => void;
   onSkip: () => void;
+  autoAdvance?: boolean; // Nouvelle prop pour contrôler l'auto-advance
 }
 
 export function StepReviewCard({
@@ -31,27 +33,37 @@ export function StepReviewCard({
   existingReview,
   onDecision,
   onAddComment,
+  onUpdateComment,
   onDeleteComment,
   onNext,
   onPrevious,
   onSkip,
+  autoAdvance = true, // Par défaut true pour maintenir la compatibilité
 }: StepReviewCardProps) {
   const [commentText, setCommentText] = useState('');
   const [showCommentForm, setShowCommentForm] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentText, setEditingCommentText] = useState('');
 
   const handleApprove = () => {
     onDecision('approved');
-    setTimeout(onNext, 300);
+    if (autoAdvance) {
+      setTimeout(onNext, 300);
+    }
   };
 
   const handleReject = () => {
     onDecision('rejected');
-    setTimeout(onNext, 300);
+    if (autoAdvance) {
+      setTimeout(onNext, 300);
+    }
   };
 
   const handleSkipStep = () => {
     onSkip();
-    setTimeout(onNext, 300);
+    if (autoAdvance) {
+      setTimeout(onNext, 300);
+    }
   };
 
   const handleAddComment = () => {
@@ -228,22 +240,78 @@ export function StepReviewCard({
               {existingReview.comments.map((comment) => (
                 <div
                   key={comment.id}
-                  className="p-3 bg-background rounded-lg flex items-start justify-between gap-2"
+                  className="p-3 bg-background rounded-lg"
                 >
-                  <div className="flex-1">
-                    <p className="text-sm">{comment.content}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(comment.timestamp).toLocaleString('fr-FR')}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => onDeleteComment(comment.id)}
-                    className="text-muted-foreground hover:text-red-500 transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+                  {editingCommentId === comment.id ? (
+                    // Edit mode
+                    <div className="space-y-2">
+                      <textarea
+                        value={editingCommentText}
+                        onChange={(e) => setEditingCommentText(e.target.value)}
+                        className="w-full p-2 bg-secondary border border-border rounded text-sm resize-none focus:outline-none focus:ring-2 focus:ring-foreground/20"
+                        rows={3}
+                      />
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => {
+                            setEditingCommentId(null);
+                            setEditingCommentText('');
+                          }}
+                          className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          Annuler
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (onUpdateComment && editingCommentText.trim()) {
+                              onUpdateComment(comment.id, editingCommentText);
+                              setEditingCommentId(null);
+                              setEditingCommentText('');
+                            }
+                          }}
+                          disabled={!editingCommentText.trim()}
+                          className="px-3 py-1 bg-foreground text-background text-xs rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+                        >
+                          Enregistrer
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    // View mode
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <p className="text-sm">{comment.content}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(comment.timestamp).toLocaleString('fr-FR')}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {onUpdateComment && (
+                          <button
+                            onClick={() => {
+                              setEditingCommentId(comment.id);
+                              setEditingCommentText(comment.content);
+                            }}
+                            className="text-muted-foreground hover:text-foreground transition-colors p-1"
+                            title="Éditer"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => onDeleteComment(comment.id)}
+                          className="text-muted-foreground hover:text-red-500 transition-colors p-1"
+                          title="Supprimer"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
