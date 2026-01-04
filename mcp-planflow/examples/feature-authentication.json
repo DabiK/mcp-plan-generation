@@ -1,0 +1,300 @@
+{
+  "schemaVersion": "1.0.0",
+  "planType": "feature",
+  "metadata": {
+    "title": "Implement User Authentication System",
+    "description": "Add JWT-based authentication with login, registration, and password reset",
+    "author": "dev-team",
+    "createdAt": "2024-01-15T10:00:00Z",
+    "updatedAt": "2024-01-15T10:00:00Z",
+    "tags": ["authentication", "security", "jwt", "backend"],
+    "revision": 1
+  },
+  "plan": {
+    "objective": "Implement a secure authentication system using JWT tokens",
+    "scope": "Backend API endpoints, database schema, and middleware",
+    "constraints": [
+      "Must use bcrypt for password hashing",
+      "JWT tokens expire after 24 hours",
+      "Refresh tokens expire after 7 days"
+    ],
+    "assumptions": [
+      "PostgreSQL database is already set up",
+      "Express.js framework is in use"
+    ],
+    "successCriteria": [
+      "Users can register with email/password",
+      "Users can login and receive JWT token",
+      "Protected routes require valid JWT",
+      "Password reset flow works end-to-end"
+    ]
+  },
+  "steps": [
+    {
+      "id": "step-1",
+      "title": "Create User database schema",
+      "description": "Design and implement the users table with necessary fields",
+      "kind": "implementation",
+      "status": "pending",
+      "dependsOn": [],
+      "estimatedDuration": "2h",
+      "actions": [
+        {
+          "type": "code",
+          "description": "Create migration for users table",
+          "tool": "terminal",
+          "command": "npx knex migrate:make create_users_table"
+        },
+        {
+          "type": "code",
+          "description": "Add columns: id, email, password_hash, created_at, updated_at",
+          "tool": "editor"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "Migration runs successfully",
+          "Table has all required columns",
+          "Email has unique constraint"
+        ],
+        "method": "Run migration and verify table structure"
+      }
+    },
+    {
+      "id": "step-2",
+      "title": "Install authentication dependencies",
+      "description": "Add required npm packages for JWT and bcrypt",
+      "kind": "setup",
+      "status": "pending",
+      "dependsOn": [],
+      "estimatedDuration": "15m",
+      "actions": [
+        {
+          "type": "command",
+          "description": "Install authentication packages",
+          "tool": "terminal",
+          "command": "npm install jsonwebtoken bcrypt @types/jsonwebtoken @types/bcrypt"
+        }
+      ],
+      "validation": {
+        "criteria": ["Packages appear in package.json", "node_modules contains packages"],
+        "method": "Check package.json and run npm list"
+      }
+    },
+    {
+      "id": "step-3",
+      "title": "Create User model",
+      "description": "Implement User model with password hashing methods",
+      "kind": "implementation",
+      "status": "pending",
+      "dependsOn": ["step-1", "step-2"],
+      "estimatedDuration": "3h",
+      "actions": [
+        {
+          "type": "code",
+          "description": "Create models/User.ts",
+          "tool": "editor"
+        },
+        {
+          "type": "code",
+          "description": "Implement hashPassword() method using bcrypt",
+          "tool": "editor"
+        },
+        {
+          "type": "code",
+          "description": "Implement comparePassword() method",
+          "tool": "editor"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "Model methods are type-safe",
+          "Password is hashed before storage",
+          "Password comparison works correctly"
+        ],
+        "method": "Unit tests for User model methods"
+      }
+    },
+    {
+      "id": "step-4",
+      "title": "Implement JWT utilities",
+      "description": "Create helper functions for generating and verifying JWT tokens",
+      "kind": "implementation",
+      "status": "pending",
+      "dependsOn": ["step-2"],
+      "estimatedDuration": "2h",
+      "actions": [
+        {
+          "type": "code",
+          "description": "Create utils/jwt.ts",
+          "tool": "editor"
+        },
+        {
+          "type": "code",
+          "description": "Implement generateToken(userId) function",
+          "tool": "editor"
+        },
+        {
+          "type": "code",
+          "description": "Implement verifyToken(token) function",
+          "tool": "editor"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "Tokens are properly signed",
+          "Tokens contain user ID",
+          "Invalid tokens are rejected"
+        ],
+        "method": "Unit tests for JWT utilities"
+      }
+    },
+    {
+      "id": "step-5",
+      "title": "Create registration endpoint",
+      "description": "Implement POST /api/auth/register endpoint",
+      "kind": "implementation",
+      "status": "pending",
+      "dependsOn": ["step-3", "step-4"],
+      "estimatedDuration": "3h",
+      "actions": [
+        {
+          "type": "code",
+          "description": "Create routes/auth.ts",
+          "tool": "editor"
+        },
+        {
+          "type": "code",
+          "description": "Implement registration controller",
+          "tool": "editor"
+        },
+        {
+          "type": "code",
+          "description": "Add input validation for email and password",
+          "tool": "editor"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "Endpoint returns 201 on success",
+          "Duplicate email returns 400",
+          "Invalid input returns validation errors"
+        ],
+        "method": "Integration tests with supertest"
+      }
+    },
+    {
+      "id": "step-6",
+      "title": "Create login endpoint",
+      "description": "Implement POST /api/auth/login endpoint",
+      "kind": "implementation",
+      "status": "pending",
+      "dependsOn": ["step-3", "step-4"],
+      "estimatedDuration": "2h",
+      "actions": [
+        {
+          "type": "code",
+          "description": "Implement login controller in routes/auth.ts",
+          "tool": "editor"
+        },
+        {
+          "type": "code",
+          "description": "Verify credentials and return JWT token",
+          "tool": "editor"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "Valid credentials return JWT token",
+          "Invalid credentials return 401",
+          "Token can be used for authenticated requests"
+        ],
+        "method": "Integration tests"
+      }
+    },
+    {
+      "id": "step-7",
+      "title": "Create authentication middleware",
+      "description": "Implement middleware to protect routes requiring authentication",
+      "kind": "implementation",
+      "status": "pending",
+      "dependsOn": ["step-4"],
+      "estimatedDuration": "2h",
+      "actions": [
+        {
+          "type": "code",
+          "description": "Create middleware/auth.ts",
+          "tool": "editor"
+        },
+        {
+          "type": "code",
+          "description": "Extract and verify JWT from Authorization header",
+          "tool": "editor"
+        },
+        {
+          "type": "code",
+          "description": "Attach user ID to request object",
+          "tool": "editor"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "Missing token returns 401",
+          "Invalid token returns 401",
+          "Valid token allows access"
+        ],
+        "method": "Unit and integration tests"
+      }
+    },
+    {
+      "id": "step-8",
+      "title": "Add integration tests",
+      "description": "Create comprehensive test suite for auth flow",
+      "kind": "testing",
+      "status": "pending",
+      "dependsOn": ["step-5", "step-6", "step-7"],
+      "estimatedDuration": "4h",
+      "actions": [
+        {
+          "type": "test",
+          "description": "Test registration flow",
+          "tool": "jest"
+        },
+        {
+          "type": "test",
+          "description": "Test login flow",
+          "tool": "jest"
+        },
+        {
+          "type": "test",
+          "description": "Test protected routes",
+          "tool": "jest"
+        }
+      ],
+      "validation": {
+        "criteria": ["All tests pass", "Coverage > 80%"],
+        "method": "npm test"
+      }
+    },
+    {
+      "id": "step-9",
+      "title": "Update API documentation",
+      "description": "Document new authentication endpoints in API docs",
+      "kind": "documentation",
+      "status": "pending",
+      "dependsOn": ["step-5", "step-6"],
+      "estimatedDuration": "1h",
+      "actions": [
+        {
+          "type": "documentation",
+          "description": "Add OpenAPI/Swagger specs for auth endpoints",
+          "tool": "editor"
+        }
+      ],
+      "validation": {
+        "criteria": ["All endpoints documented", "Examples provided"],
+        "method": "Review documentation"
+      }
+    }
+  ]
+}

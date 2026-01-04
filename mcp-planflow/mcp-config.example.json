@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "planflow": {
+      "command": "node",
+      "args": ["/absolute/path/to/mcp-planflow/dist/index.js"],
+      "env": {
+        "MONGODB_URI": "mongodb://localhost:27017",
+        "MONGODB_DB_NAME": "planflow",
+        "MONGODB_COLLECTION_NAME": "plans",
+        "NODE_ENV": "production"
+      }
+    }
+  }
+}

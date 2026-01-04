@@ -1,0 +1,354 @@
+{
+  "schemaVersion": "1.0.0",
+  "planType": "refactor",
+  "metadata": {
+    "title": "Refactor API Layer to Hexagonal Architecture",
+    "description": "Restructure codebase from layered architecture to hexagonal (ports & adapters)",
+    "author": "architecture-team",
+    "createdAt": "2024-01-25T09:00:00Z",
+    "updatedAt": "2024-01-25T09:00:00Z",
+    "tags": ["refactor", "architecture", "clean-code", "hexagonal"],
+    "revision": 1
+  },
+  "plan": {
+    "objective": "Transform existing layered architecture into hexagonal architecture for better testability and maintainability",
+    "scope": "Core business logic, infrastructure, and application layers",
+    "constraints": [
+      "Must maintain backwards compatibility with existing API",
+      "No changes to database schema",
+      "Refactor incrementally without breaking production"
+    ],
+    "assumptions": [
+      "Team is familiar with hexagonal architecture principles",
+      "Comprehensive test coverage exists"
+    ],
+    "successCriteria": [
+      "Core domain logic is framework-independent",
+      "All infrastructure concerns are in adapter layer",
+      "Test coverage remains above 85%",
+      "All existing tests still pass"
+    ]
+  },
+  "steps": [
+    {
+      "id": "step-1",
+      "title": "Create folder structure",
+      "description": "Set up new directory structure for hexagonal architecture",
+      "kind": "setup",
+      "status": "pending",
+      "dependsOn": [],
+      "estimatedDuration": "30m",
+      "actions": [
+        {
+          "type": "command",
+          "description": "Create domain, application, and infrastructure directories",
+          "tool": "terminal",
+          "command": "mkdir -p src/{domain,application,infrastructure}"
+        },
+        {
+          "type": "command",
+          "description": "Create subdirectories for ports and adapters",
+          "tool": "terminal",
+          "command": "mkdir -p src/domain/{entities,value-objects,services,repositories}"
+        }
+      ],
+      "validation": {
+        "criteria": ["Directory structure matches hexagonal pattern"],
+        "method": "Visual inspection of file tree"
+      }
+    },
+    {
+      "id": "step-2",
+      "title": "Extract domain entities",
+      "description": "Move business entities from models to domain layer",
+      "kind": "implementation",
+      "status": "pending",
+      "dependsOn": ["step-1"],
+      "estimatedDuration": "4h",
+      "actions": [
+        {
+          "type": "code",
+          "description": "Identify pure business entities",
+          "tool": "editor"
+        },
+        {
+          "type": "code",
+          "description": "Remove framework dependencies from entities",
+          "tool": "editor"
+        },
+        {
+          "type": "code",
+          "description": "Move to src/domain/entities/",
+          "tool": "editor"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "Entities have no framework imports",
+          "Business logic is preserved",
+          "Existing tests still pass"
+        ],
+        "method": "Run unit tests"
+      }
+    },
+    {
+      "id": "step-3",
+      "title": "Define repository ports",
+      "description": "Create interfaces for repository ports in domain layer",
+      "kind": "implementation",
+      "status": "pending",
+      "dependsOn": ["step-2"],
+      "estimatedDuration": "3h",
+      "actions": [
+        {
+          "type": "code",
+          "description": "Create IUserRepository interface",
+          "tool": "editor"
+        },
+        {
+          "type": "code",
+          "description": "Create IProductRepository interface",
+          "tool": "editor"
+        },
+        {
+          "type": "code",
+          "description": "Define pure domain methods (no ORM specifics)",
+          "tool": "editor"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "Interfaces contain no infrastructure details",
+          "All domain operations are represented"
+        ],
+        "method": "Code review"
+      }
+    },
+    {
+      "id": "step-4",
+      "title": "Implement repository adapters",
+      "description": "Create concrete implementations of repository ports using existing ORM",
+      "kind": "implementation",
+      "status": "pending",
+      "dependsOn": ["step-3"],
+      "estimatedDuration": "5h",
+      "actions": [
+        {
+          "type": "code",
+          "description": "Implement MongoUserRepository",
+          "tool": "editor"
+        },
+        {
+          "type": "code",
+          "description": "Implement MongoProductRepository",
+          "tool": "editor"
+        },
+        {
+          "type": "code",
+          "description": "Move to src/infrastructure/persistence/",
+          "tool": "editor"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "Repositories implement port interfaces",
+          "All CRUD operations work",
+          "Integration tests pass"
+        ],
+        "method": "Run integration tests"
+      }
+    },
+    {
+      "id": "step-5",
+      "title": "Create use cases",
+      "description": "Extract application logic into use case classes",
+      "kind": "implementation",
+      "status": "pending",
+      "dependsOn": ["step-3"],
+      "estimatedDuration": "6h",
+      "actions": [
+        {
+          "type": "code",
+          "description": "Create CreateUserUseCase",
+          "tool": "editor"
+        },
+        {
+          "type": "code",
+          "description": "Create GetProductUseCase",
+          "tool": "editor"
+        },
+        {
+          "type": "code",
+          "description": "Inject repository ports via constructor",
+          "tool": "editor"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "Use cases depend on ports, not concrete classes",
+          "Business logic is testable in isolation"
+        ],
+        "method": "Unit test use cases with mock repositories"
+      }
+    },
+    {
+      "id": "step-6",
+      "title": "Implement API adapters",
+      "description": "Create HTTP controllers that call use cases",
+      "kind": "implementation",
+      "status": "pending",
+      "dependsOn": ["step-5", "step-4"],
+      "estimatedDuration": "4h",
+      "actions": [
+        {
+          "type": "code",
+          "description": "Create UserController using use cases",
+          "tool": "editor"
+        },
+        {
+          "type": "code",
+          "description": "Create ProductController using use cases",
+          "tool": "editor"
+        },
+        {
+          "type": "code",
+          "description": "Move to src/infrastructure/http/",
+          "tool": "editor"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "Controllers are thin adapters",
+          "Request/response mapping is clear",
+          "API contracts unchanged"
+        ],
+        "method": "API integration tests"
+      }
+    },
+    {
+      "id": "step-7",
+      "title": "Setup dependency injection",
+      "description": "Configure DI container to wire ports and adapters",
+      "kind": "setup",
+      "status": "pending",
+      "dependsOn": ["step-4", "step-5", "step-6"],
+      "estimatedDuration": "3h",
+      "actions": [
+        {
+          "type": "code",
+          "description": "Install tsyringe or awilix",
+          "tool": "terminal",
+          "command": "npm install tsyringe reflect-metadata"
+        },
+        {
+          "type": "code",
+          "description": "Create container configuration",
+          "tool": "editor"
+        },
+        {
+          "type": "code",
+          "description": "Register all dependencies",
+          "tool": "editor"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "All dependencies resolve correctly",
+          "No circular dependencies",
+          "Container can be reset for tests"
+        ],
+        "method": "Run application and verify startup"
+      }
+    },
+    {
+      "id": "step-8",
+      "title": "Migrate existing tests",
+      "description": "Update test suite to work with new architecture",
+      "kind": "testing",
+      "status": "pending",
+      "dependsOn": ["step-7"],
+      "estimatedDuration": "6h",
+      "actions": [
+        {
+          "type": "test",
+          "description": "Update unit tests to test domain in isolation",
+          "tool": "jest"
+        },
+        {
+          "type": "test",
+          "description": "Update integration tests with new structure",
+          "tool": "jest"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "All tests pass",
+          "Coverage remains above 85%",
+          "Tests are more focused and faster"
+        ],
+        "method": "npm test"
+      }
+    },
+    {
+      "id": "step-9",
+      "title": "Remove old code",
+      "description": "Delete legacy files and unused dependencies",
+      "kind": "cleanup",
+      "status": "pending",
+      "dependsOn": ["step-8"],
+      "estimatedDuration": "2h",
+      "actions": [
+        {
+          "type": "command",
+          "description": "Remove old models directory",
+          "tool": "terminal",
+          "command": "rm -rf src/models"
+        },
+        {
+          "type": "command",
+          "description": "Remove old controllers directory",
+          "tool": "terminal",
+          "command": "rm -rf src/controllers"
+        }
+      ],
+      "validation": {
+        "criteria": ["No dead code remains", "Build succeeds", "All tests pass"],
+        "method": "npm run build && npm test"
+      }
+    },
+    {
+      "id": "step-10",
+      "title": "Update documentation",
+      "description": "Document new architecture and patterns",
+      "kind": "documentation",
+      "status": "pending",
+      "dependsOn": ["step-9"],
+      "estimatedDuration": "4h",
+      "actions": [
+        {
+          "type": "documentation",
+          "description": "Create architecture diagram",
+          "tool": "mermaid"
+        },
+        {
+          "type": "documentation",
+          "description": "Update README with new structure",
+          "tool": "editor"
+        },
+        {
+          "type": "documentation",
+          "description": "Add CONTRIBUTING guide with architecture patterns",
+          "tool": "editor"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "Architecture is clearly explained",
+          "New developers can understand structure",
+          "Patterns are documented with examples"
+        ],
+        "method": "Documentation review with team"
+      }
+    }
+  ]
+}

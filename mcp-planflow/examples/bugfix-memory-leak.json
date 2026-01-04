@@ -1,0 +1,204 @@
+{
+  "schemaVersion": "1.0.0",
+  "planType": "bugfix",
+  "metadata": {
+    "title": "Fix Memory Leak in WebSocket Handler",
+    "description": "Resolve memory leak caused by event listeners not being cleaned up",
+    "author": "bug-squad",
+    "createdAt": "2024-01-20T14:30:00Z",
+    "updatedAt": "2024-01-20T14:30:00Z",
+    "tags": ["bugfix", "performance", "websocket", "memory"],
+    "revision": 1
+  },
+  "plan": {
+    "objective": "Fix memory leak in WebSocket connection handler by properly cleaning up resources",
+    "scope": "WebSocket server implementation and connection management",
+    "constraints": [
+      "Must not break existing WebSocket functionality",
+      "Fix must be backwards compatible",
+      "No downtime during deployment"
+    ],
+    "assumptions": [
+      "Memory profiling tools are available",
+      "Test environment can reproduce the leak"
+    ],
+    "successCriteria": [
+      "Memory usage stabilizes during load testing",
+      "No resource cleanup warnings in logs",
+      "Existing WebSocket tests still pass"
+    ]
+  },
+  "steps": [
+    {
+      "id": "step-1",
+      "title": "Reproduce memory leak",
+      "description": "Set up environment to consistently reproduce the memory leak",
+      "kind": "analysis",
+      "status": "pending",
+      "dependsOn": [],
+      "estimatedDuration": "2h",
+      "actions": [
+        {
+          "type": "test",
+          "description": "Create load test script with 1000+ concurrent connections",
+          "tool": "editor"
+        },
+        {
+          "type": "command",
+          "description": "Run memory profiler",
+          "tool": "terminal",
+          "command": "node --inspect --expose-gc src/server.js"
+        }
+      ],
+      "validation": {
+        "criteria": ["Memory usage increases steadily", "Heap snapshots show retained objects"],
+        "method": "Chrome DevTools memory profiler"
+      }
+    },
+    {
+      "id": "step-2",
+      "title": "Identify leak source",
+      "description": "Use heap snapshots to identify which objects are not being garbage collected",
+      "kind": "analysis",
+      "status": "pending",
+      "dependsOn": ["step-1"],
+      "estimatedDuration": "3h",
+      "actions": [
+        {
+          "type": "analysis",
+          "description": "Take heap snapshots before and after connection lifecycle",
+          "tool": "chrome-devtools"
+        },
+        {
+          "type": "analysis",
+          "description": "Compare snapshots to find retained event listeners",
+          "tool": "chrome-devtools"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "Specific event listeners identified",
+          "Connection lifecycle clearly mapped"
+        ],
+        "method": "Review heap snapshot comparison"
+      }
+    },
+    {
+      "id": "step-3",
+      "title": "Implement cleanup logic",
+      "description": "Add proper event listener cleanup in disconnect handler",
+      "kind": "implementation",
+      "status": "pending",
+      "dependsOn": ["step-2"],
+      "estimatedDuration": "2h",
+      "actions": [
+        {
+          "type": "code",
+          "description": "Add removeAllListeners() call in disconnect handler",
+          "tool": "editor"
+        },
+        {
+          "type": "code",
+          "description": "Ensure all custom event handlers are cleaned up",
+          "tool": "editor"
+        },
+        {
+          "type": "code",
+          "description": "Clear any timers or intervals",
+          "tool": "editor"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "All event listeners removed on disconnect",
+          "No timers remain active"
+        ],
+        "method": "Code review and unit tests"
+      }
+    },
+    {
+      "id": "step-4",
+      "title": "Add automated regression test",
+      "description": "Create test to detect memory leaks in CI/CD pipeline",
+      "kind": "testing",
+      "status": "pending",
+      "dependsOn": ["step-3"],
+      "estimatedDuration": "3h",
+      "actions": [
+        {
+          "type": "test",
+          "description": "Create memory leak detection test",
+          "tool": "jest"
+        },
+        {
+          "type": "test",
+          "description": "Test multiple connection/disconnection cycles",
+          "tool": "jest"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "Test fails without fix",
+          "Test passes with fix",
+          "Memory usage stays below threshold"
+        ],
+        "method": "Run test suite"
+      }
+    },
+    {
+      "id": "step-5",
+      "title": "Verify fix in staging",
+      "description": "Deploy fix to staging environment and run load tests",
+      "kind": "validation",
+      "status": "pending",
+      "dependsOn": ["step-4"],
+      "estimatedDuration": "2h",
+      "actions": [
+        {
+          "type": "deployment",
+          "description": "Deploy to staging environment",
+          "tool": "terminal",
+          "command": "npm run deploy:staging"
+        },
+        {
+          "type": "test",
+          "description": "Run 24-hour load test",
+          "tool": "k6"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "Memory usage remains stable over 24 hours",
+          "No increase in error rates",
+          "Connection handling performance unchanged"
+        ],
+        "method": "Monitor staging metrics"
+      }
+    },
+    {
+      "id": "step-6",
+      "title": "Update documentation",
+      "description": "Document the fix and proper cleanup patterns",
+      "kind": "documentation",
+      "status": "pending",
+      "dependsOn": ["step-3"],
+      "estimatedDuration": "1h",
+      "actions": [
+        {
+          "type": "documentation",
+          "description": "Add comments explaining cleanup logic",
+          "tool": "editor"
+        },
+        {
+          "type": "documentation",
+          "description": "Update WebSocket implementation guide",
+          "tool": "editor"
+        }
+      ],
+      "validation": {
+        "criteria": ["Code is well-commented", "Guide includes cleanup pattern"],
+        "method": "Documentation review"
+      }
+    }
+  ]
+}

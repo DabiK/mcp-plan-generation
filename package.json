@@ -1,0 +1,31 @@
+{
+  "name": "mcp-planflow-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MCP PlanFlow - Monorepo for MCP server and workflow visualization",
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm -r --parallel dev",
+    "clean": "pnpm -r clean && rm -rf node_modules",
+    "lint": "pnpm -r lint",
+    "format": "pnpm -r format",
+    "test": "pnpm -r test"
+  },
+  "keywords": [
+    "mcp",
+    "planflow",
+    "workflow",
+    "implementation-plan",
+    "monorepo"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}
