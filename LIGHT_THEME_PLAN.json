@@ -1,0 +1,290 @@
+{
+  "schemaVersion": "1.1.0",
+  "planType": "feature",
+  "metadata": {
+    "title": "Implémentation d'un thème light pour PlanFlow Viewer",
+    "description": "Ajouter un mode clair à l'application avec toggle et persistance de la préférence utilisateur",
+    "author": "AI Assistant",
+    "tags": ["ui", "theme", "accessibility", "user-preference"]
+  },
+  "plan": {
+    "objective": "Permettre aux utilisateurs de choisir entre un thème sombre et un thème clair pour améliorer l'accessibilité et le confort visuel",
+    "scope": "Application complète - composants, pages, contexte global",
+    "constraints": [
+      "Maintenir la compatibilité avec Tailwind CSS existant",
+      "Ne pas casser le thème dark actuel",
+      "Utiliser localStorage pour la persistance",
+      "Support de la préférence système (prefers-color-scheme)",
+      "Performance: pas de flash de thème au chargement"
+    ],
+    "successCriteria": [
+      "Toggle fonctionnel accessible depuis la navbar",
+      "Toutes les pages s'affichent correctement en mode light",
+      "Préférence sauvegardée et restaurée au reload",
+      "Contraste WCAG AA respecté pour l'accessibilité",
+      "Pas de régression sur le thème dark"
+    ]
+  },
+  "steps": [
+    {
+      "id": "analyze-current-theme",
+      "title": "Analyser le thème dark actuel",
+      "description": "Identifier toutes les classes Tailwind et couleurs custom utilisées pour créer une mapping cohérent vers le thème light",
+      "kind": "analysis",
+      "status": "pending",
+      "dependsOn": [],
+      "estimatedDuration": {
+        "value": 30,
+        "unit": "minutes"
+      },
+      "actions": [
+        {
+          "type": "terminal",
+          "payload": {
+            "command": "grep -r 'bg-\\|text-\\|border-' src/ | grep -v node_modules"
+          },
+          "description": "Lister toutes les classes Tailwind de couleur utilisées"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "Liste complète des couleurs utilisées (bg, text, border)",
+          "Identification des composants critiques (cards, buttons, inputs)",
+          "Documentation des classes dark: existantes"
+        ]
+      }
+    },
+    {
+      "id": "update-tailwind-config",
+      "title": "Configurer Tailwind pour le dark mode",
+      "description": "Activer darkMode: 'class' dans tailwind.config.js pour permettre le toggle manuel",
+      "kind": "edit_file",
+      "status": "pending",
+      "dependsOn": ["analyze-current-theme"],
+      "estimatedDuration": {
+        "value": 15,
+        "unit": "minutes"
+      },
+      "actions": [
+        {
+          "type": "edit_file",
+          "filePath": "packages/planflow-viewer/tailwind.config.js",
+          "before": "export default {\n  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],\n  theme: {",
+          "after": "export default {\n  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],\n  darkMode: 'class',\n  theme: {",
+          "description": "Activer le mode dark avec classe"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "darkMode: 'class' dans tailwind.config.js",
+          "Build réussi sans erreur"
+        ]
+      }
+    },
+    {
+      "id": "create-theme-context",
+      "title": "Créer le ThemeContext et Provider",
+      "description": "Implémenter un context React pour gérer l'état du thème (dark/light) avec hooks personnalisés",
+      "kind": "create_file",
+      "status": "pending",
+      "dependsOn": ["update-tailwind-config"],
+      "estimatedDuration": {
+        "value": 1,
+        "unit": "hours"
+      },
+      "actions": [
+        {
+          "type": "create_file",
+          "filePath": "packages/planflow-viewer/src/contexts/ThemeContext.tsx",
+          "content": "import { createContext, useContext, useEffect, useState } from 'react';\n\ntype Theme = 'light' | 'dark' | 'system';\n\ninterface ThemeContextType {\n  theme: Theme;\n  actualTheme: 'light' | 'dark';\n  setTheme: (theme: Theme) => void;\n}\n\nconst ThemeContext = createContext<ThemeContextType | undefined>(undefined);\n\nfunction getSystemTheme(): 'light' | 'dark' {\n  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';\n}\n\nfunction getStoredTheme(): Theme {\n  const stored = localStorage.getItem('theme');\n  if (stored === 'light' || stored === 'dark' || stored === 'system') {\n    return stored;\n  }\n  return 'system';\n}\n\nexport function ThemeProvider({ children }: { children: React.ReactNode }) {\n  const [theme, setThemeState] = useState<Theme>(getStoredTheme);\n  const [systemTheme, setSystemTheme] = useState<'light' | 'dark'>(getSystemTheme);\n\n  const actualTheme = theme === 'system' ? systemTheme : theme;\n\n  useEffect(() => {\n    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');\n    const handler = () => setSystemTheme(getSystemTheme());\n    mediaQuery.addEventListener('change', handler);\n    return () => mediaQuery.removeEventListener('change', handler);\n  }, []);\n\n  useEffect(() => {\n    const root = document.documentElement;\n    root.classList.remove('light', 'dark');\n    root.classList.add(actualTheme);\n  }, [actualTheme]);\n\n  const setTheme = (newTheme: Theme) => {\n    setThemeState(newTheme);\n    localStorage.setItem('theme', newTheme);\n  };\n\n  return (\n    <ThemeContext.Provider value={{ theme, actualTheme, setTheme }}>\n      {children}\n    </ThemeContext.Provider>\n  );\n}\n\nexport function useTheme() {\n  const context = useContext(ThemeContext);\n  if (!context) {\n    throw new Error('useTheme must be used within ThemeProvider');\n  }\n  return context;\n}",
+          "description": "Context React pour gérer le thème avec persistance"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "Context créé avec type Theme = 'light' | 'dark' | 'system'",
+          "Hook useTheme() exporté",
+          "Détection de la préférence système fonctionnelle"
+        ]
+      }
+    },
+    {
+      "id": "add-hydration-script",
+      "title": "Ajouter le script d'hydratation rapide",
+      "description": "Script inline dans index.html pour éviter le flash de thème au chargement",
+      "kind": "edit_file",
+      "status": "pending",
+      "dependsOn": ["create-theme-context"],
+      "estimatedDuration": {
+        "value": 20,
+        "unit": "minutes"
+      },
+      "actions": [
+        {
+          "type": "edit_file",
+          "filePath": "packages/planflow-viewer/index.html",
+          "before": "  <head>\n    <meta charset=\"UTF-8\" />\n    <link rel=\"icon\" type=\"image/svg+xml\" href=\"/vite.svg\" />",
+          "after": "  <head>\n    <meta charset=\"UTF-8\" />\n    <link rel=\"icon\" type=\"image/svg+xml\" href=\"/vite.svg\" />\n    <script>\n      (function() {\n        const theme = localStorage.getItem('theme') || 'system';\n        const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);\n        document.documentElement.classList.add(isDark ? 'dark' : 'light');\n      })();\n    </script>",
+          "description": "Script pour appliquer le thème avant le premier render"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "Pas de flash au chargement",
+          "Thème appliqué immédiatement"
+        ]
+      }
+    },
+    {
+      "id": "create-theme-toggle",
+      "title": "Créer le composant ThemeToggle",
+      "description": "Bouton switch accessible avec icônes soleil/lune pour basculer entre les thèmes",
+      "kind": "create_file",
+      "status": "pending",
+      "dependsOn": ["create-theme-context"],
+      "estimatedDuration": {
+        "value": 45,
+        "unit": "minutes"
+      },
+      "actions": [
+        {
+          "type": "create_file",
+          "filePath": "packages/planflow-viewer/src/components/ThemeToggle.tsx",
+          "content": "import { Sun, Moon } from 'lucide-react';\nimport { useTheme } from '../contexts/ThemeContext';\n\nexport function ThemeToggle() {\n  const { actualTheme, setTheme } = useTheme();\n\n  const toggleTheme = () => {\n    setTheme(actualTheme === 'dark' ? 'light' : 'dark');\n  };\n\n  return (\n    <button\n      onClick={toggleTheme}\n      className=\"p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors\"\n      aria-label={`Switch to ${actualTheme === 'dark' ? 'light' : 'dark'} theme`}\n    >\n      {actualTheme === 'dark' ? (\n        <Sun className=\"w-5 h-5 text-yellow-500\" />\n      ) : (\n        <Moon className=\"w-5 h-5 text-gray-700\" />\n      )}\n    </button>\n  );\n}",
+          "description": "Toggle de thème avec icônes et accessibilité"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "Icônes affichées correctement",
+          "Toggle fonctionnel",
+          "Accessible au clavier"
+        ]
+      }
+    },
+    {
+      "id": "integrate-theme-provider",
+      "title": "Intégrer ThemeProvider dans l'app",
+      "description": "Wrapper toute l'application avec le ThemeProvider",
+      "kind": "edit_file",
+      "status": "pending",
+      "dependsOn": ["create-theme-context"],
+      "estimatedDuration": {
+        "value": 15,
+        "unit": "minutes"
+      },
+      "actions": [
+        {
+          "type": "edit_file",
+          "filePath": "packages/planflow-viewer/src/main.tsx",
+          "before": "import App from './App';\nimport './index.css';\n\nReactDOM.createRoot(document.getElementById('root')!).render(\n  <React.StrictMode>\n    <App />",
+          "after": "import App from './App';\nimport './index.css';\nimport { ThemeProvider } from './contexts/ThemeContext';\n\nReactDOM.createRoot(document.getElementById('root')!).render(\n  <React.StrictMode>\n    <ThemeProvider>\n      <App />",
+          "description": "Wrapper l'app avec ThemeProvider"
+        },
+        {
+          "type": "edit_file",
+          "filePath": "packages/planflow-viewer/src/main.tsx",
+          "before": "    <App />\n  </React.StrictMode>\n);",
+          "after": "      <App />\n    </ThemeProvider>\n  </React.StrictMode>\n);",
+          "description": "Fermer le ThemeProvider"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "ThemeProvider wraps toute l'app",
+          "App démarre sans erreur"
+        ]
+      }
+    },
+    {
+      "id": "add-toggle-to-navbar",
+      "title": "Ajouter le toggle dans la navbar",
+      "description": "Intégrer le ThemeToggle dans AppLayout pour un accès facile",
+      "kind": "edit_file",
+      "status": "pending",
+      "dependsOn": ["create-theme-toggle", "integrate-theme-provider"],
+      "estimatedDuration": {
+        "value": 20,
+        "unit": "minutes"
+      },
+      "actions": [
+        {
+          "type": "edit_file",
+          "filePath": "packages/planflow-viewer/src/components/layout/AppLayout.tsx",
+          "before": "import { Link, useLocation } from 'react-router-dom';",
+          "after": "import { Link, useLocation } from 'react-router-dom';\nimport { ThemeToggle } from '../ThemeToggle';",
+          "description": "Importer ThemeToggle"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "Toggle visible dans la navbar",
+          "Fonctionne sur toutes les pages"
+        ]
+      }
+    },
+    {
+      "id": "update-base-colors",
+      "title": "Adapter les couleurs de base",
+      "description": "Ajouter les classes dark: sur les composants de base (body, containers, cards)",
+      "kind": "edit_file",
+      "status": "pending",
+      "dependsOn": ["integrate-theme-provider"],
+      "estimatedDuration": {
+        "value": 2,
+        "unit": "hours"
+      },
+      "actions": [
+        {
+          "type": "edit_file",
+          "filePath": "packages/planflow-viewer/src/index.css",
+          "before": "body {\n  margin: 0;\n  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',",
+          "after": "body {\n  margin: 0;\n  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen';\n  @apply bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100;",
+          "description": "Adapter body pour les deux thèmes"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "Background adapté en light/dark",
+          "Texte lisible dans les deux modes",
+          "Pas de régression visuelle"
+        ]
+      }
+    },
+    {
+      "id": "test-all-pages",
+      "title": "Tests visuels complets",
+      "description": "Vérifier toutes les pages en mode light et dark",
+      "kind": "manual_test",
+      "status": "pending",
+      "dependsOn": ["update-base-colors", "add-toggle-to-navbar"],
+      "estimatedDuration": {
+        "value": 1,
+        "unit": "hours"
+      },
+      "actions": [
+        {
+          "type": "manual_test",
+          "payload": {
+            "scenarios": [
+              "Tester la page d'accueil en light et dark",
+              "Tester la page de review en light et dark",
+              "Vérifier le toggle sur mobile et desktop",
+              "Tester le rechargement de page (persistance)",
+              "Vérifier les contrastes avec outil"
+            ]
+          },
+          "description": "Tests manuels complets des deux thèmes"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "Toutes les pages lisibles en light et dark",
+          "Contraste WCAG AA respecté",
+          "Pas de flash au reload",
+          "Toggle fonctionnel partout"
+        ]
+      }
+    }
+  ]
+}

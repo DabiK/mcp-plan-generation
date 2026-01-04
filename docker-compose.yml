@@ -1,0 +1,44 @@
+version: '3.9'
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  mcp-planflow:
+    build:
+      context: .
+      dockerfile: packages/mcp-planflow/Dockerfile
+    restart: unless-stopped
+    environment:
+      MONGODB_URI: mongodb://mongo:27017
+      MONGODB_DB_NAME: planflow
+      HTTP_ENABLED: "true"
+      HTTP_PORT: "3000"
+      HTTP_HOST: 0.0.0.0
+      CORS_ORIGIN: http://localhost:4173
+      MCP_ENABLED: "true"
+      NODE_ENV: production
+    depends_on:
+      - mongo
+    ports:
+      - "3000:3000"
+
+  planflow-viewer:
+    build:
+      context: .
+      dockerfile: packages/planflow-viewer/Dockerfile
+      args:
+        VITE_API_URL: http://localhost:3000
+    restart: unless-stopped
+    depends_on:
+      - mcp-planflow
+    ports:
+      - "4173:4173"
+
+volumes:
+  mongo-data:

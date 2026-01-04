@@ -637,6 +637,10 @@ export class McpServer {
 
   // ==================== Server Lifecycle ====================
 
+  getServer(): Server {
+    return this.server;
+  }
+
   async start(): Promise<void> {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);

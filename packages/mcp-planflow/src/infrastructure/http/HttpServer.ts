@@ -1,15 +1,16 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import { injectable } from 'tsyringe';
+import { injectable, inject } from 'tsyringe';
 import { config } from '../config/env';
 import { planRouter } from './routes/planRoutes';
+import { McpSseHandler } from './McpSseHandler';
 
 @injectable()
 export class HttpServer {
   private app: express.Application;
   private server?: ReturnType<typeof this.app.listen>;
 
-  constructor() {
+  constructor(@inject(McpSseHandler) private mcpSseHandler: McpSseHandler) {
     this.app = express();
     this.setupMiddleware();
     this.setupRoutes();
@@ -44,6 +45,19 @@ export class HttpServer {
         timestamp: new Date().toISOString(),
         service: 'mcp-planflow',
       });
+    });
+
+    // MCP StreamableHTTP endpoint - gère GET (SSE), POST (messages), DELETE (cleanup)
+    this.app.options('/mcp', (req: Request, res: Response) => {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, mcp-session-id');
+      res.status(204).end();
+    });
+
+    // Un seul endpoint pour tous les types de requêtes MCP
+    this.app.all('/mcp', (req: Request, res: Response) => {
+      this.mcpSseHandler.handleRequest(req, res);
     });
 
     // API routes

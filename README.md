@@ -1,125 +1,238 @@
-# MCP PlanFlow Monorepo
+# 🎯 MCP PlanFlow
 
-A complete solution for managing and visualizing implementation plans using the Model Context Protocol.
+> **Gérez vos plans d'implémentation avec GitHub Copilot**
 
-## 📦 Packages
+PlanFlow est un outil complet qui vous permet de créer, valider et reviewer des plans d'implémentation directement depuis VS Code. Grâce au **Model Context Protocol (MCP)**, dialoguez avec GitHub Copilot pour générer des plans structurés, puis utilisez l'interface web pour les reviewer visuellement.
 
-### [`mcp-planflow`](./mcp-planflow)
-MCP server for creating, validating, and managing implementation plans with MongoDB persistence.
+**✨ Pourquoi PlanFlow ?**
+- 🤖 **Intégration Copilot** : Créez des plans en langage naturel via MCP
+- 📊 **Review visuelle** : Interface web moderne avec navigation par phases
+- 💾 **Persistance** : MongoDB pour stocker et versionner vos plans
+- ⚡ **Raccourcis clavier** : Review rapide avec A (approve), R (reject), S (skip)
 
-**Features:**
-- 6 MCP tools (create, get, update, list, validate, get-format)
-- Hexagonal architecture
-- Dependency injection with TSyringe
-- MongoDB persistence
-- JSON Schema validation with cycle detection
+## 🚀 Démarrage rapide
 
-### [`packages/planflow-viewer`](./packages/planflow-viewer) *(coming soon)*
-Web-based visualization interface for implementation plans.
-
-**Features:**
-- Interactive workflow visualization
-- Dependency graph display
-- Step execution tracking
-- Real-time plan updates
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Node.js >= 18
-- pnpm >= 8
-- MongoDB >= 6.0
-
-### Installation
+### Option 1 : Docker (recommandé)
 
 ```bash
-# Install all dependencies
+# Cloner le projet
+git clone <votre-repo>
+cd MCP-Plan
+
+# Démarrer l'environnement complet
+  docker compose up --build
+```
+
+Accès :
+- **Interface de review** : http://localhost:4173
+- **API REST** : http://localhost:3000
+- **MongoDB** : mongodb://localhost:27017
+
+### Option 2 : Développement local
+
+**Prérequis :** Node.js ≥ 18, pnpm ≥ 8, MongoDB local
+
+```bash
+# Installation
 pnpm install
 
-# Build all packages
+# Build
 pnpm build
-```
 
-### Development
-
-```bash
-# Run all packages in dev mode (parallel)
+# Lancer les deux apps
 pnpm dev
-
-# Build all packages
-pnpm build
-
-# Run tests across all packages
-pnpm test
-
-# Lint all packages
-pnpm lint
 ```
 
-### Working with individual packages
+L'API tourne sur `http://localhost:3000` et l'interface sur `http://localhost:5174`.
 
-```bash
-# Run commands in specific package
-pnpm --filter mcp-planflow build
-pnpm --filter planflow-viewer dev
+## 🔧 Configuration VS Code avec MCP
 
-# Or navigate to package directory
-cd mcp-planflow
-pnpm build
-```
+Pour utiliser PlanFlow directement dans GitHub Copilot Chat, vous avez **deux options** :
 
-## 📁 Project Structure
+### Option A : Mode stdio (lance une instance dédiée)
 
-```
-MCP-Plan/
-├── package.json              # Root package (workspace config)
-├── pnpm-workspace.yaml       # pnpm workspace definition
-├── .npmrc                    # pnpm configuration
-├── mcp-planflow/            # MCP server package
-│   ├── src/
-│   │   ├── domain/          # Core business logic
-│   │   ├── application/     # Use cases & DTOs
-│   │   ├── infrastructure/  # MCP, MongoDB, validation
-│   │   └── di/              # Dependency injection
-│   └── package.json
-└── packages/
-    └── planflow-viewer/     # Visualization UI (TBD)
-        ├── src/
-        └── package.json
-```
+Le fichier `.vscode/mcp.json` est configuré pour lancer une nouvelle instance du serveur MCP :
 
-## 🔧 Available Commands
-
-| Command | Description |
-|---------|-------------|
-| `pnpm install` | Install dependencies for all packages |
-| `pnpm build` | Build all packages |
-| `pnpm dev` | Run all packages in development mode |
-| `pnpm clean` | Clean all node_modules and build artifacts |
-| `pnpm lint` | Lint all packages |
-| `pnpm format` | Format code across all packages |
-| `pnpm test` | Run tests for all packages |
-
-## 🔗 Cross-Package Dependencies
-
-The viewer package can depend on shared types from the MCP server:
-
-```json
+```jsonc
 {
-  "dependencies": {
-    "mcp-planflow": "workspace:*"
+  "mcpServers": {
+    "planflow": {
+      "command": "node",
+      "args": ["${workspaceFolder}/packages/mcp-planflow/dist/index.js"],
+      "env": {
+        "MONGODB_URI": "mongodb://localhost:27017",
+        "MONGODB_DB_NAME": "planflow",
+        "NODE_ENV": "production",
+        "HTTP_ENABLED": "false",
+        "MCP_ENABLED": "true"
+      }
+    }
   }
 }
 ```
 
-## 📝 License
+**Avantages** : Simple, pas besoin de serveur séparé  
+**Prérequis** : Build du projet (`pnpm --filter mcp-planflow build`)
+
+### Option B : Mode HTTP (se connecte au serveur en cours)
+
+Si vous avez déjà lancé le serveur via `pnpm dev` ou Docker, connectez-vous à celui-ci :
+
+```jsonc
+{
+  "mcpServers": {
+    "planflow-http": {
+      "url": "http://localhost:3000/mcp"
+    }
+  }
+}
+```
+
+**Avantages** : Réutilise le serveur existant, hot reload disponible, gestion de session  
+**Prérequis** : Serveur lancé (`pnpm dev` ou `docker compose up`)  
+**Transport** : StreamableHTTP (protocole moderne MCP 2025-11-25)
+
+> **Fichier exemple** : Voir `.vscode/mcp-sse.json.example` pour la config HTTP complète
+
+## 💡 Exemples d'utilisation
+
+### Créer un plan d'implémentation
+
+**Prompt :**
+```
+Crée-moi un plan d'implémentation pour ajouter un système d'authentification 
+à mon app React avec JWT. Je veux :
+- Login/register pages
+- Protected routes
+- Token refresh automatique
+- Logout
+```
+
+Le MCP va générer un plan structuré avec étapes, dépendances, et validation.
+
+### Valider un plan existant
+
+**Prompt :**
+```
+Valide le plan "auth-system-v2" et dis-moi s'il y a des problèmes 
+(dépendances circulaires, IDs dupliqués, etc.)
+```
+
+### Récupérer et analyser un plan
+
+**Prompt :**
+```
+Récupère le plan "auth-system-v2" et montre-moi les étapes critiques 
+sur le chemin de la feature principale
+```
+
+### Review d'un plan
+
+**Prompt :**
+```
+Liste tous les plans en status 'draft' et montre-moi celui 
+qui a le plus d'étapes bloquées
+```
+
+Vous pouvez ensuite ouvrir l'interface web pour reviewer visuellement :
+```
+http://localhost:4173/plans/{planId}/review
+```
+
+### Créer un plan avec architecture complexe
+
+**Prompt :**
+```
+Génère un plan pour migrer notre backend Express vers NestJS :
+- Phase 1 : Setup NestJS à côté de l'existant
+- Phase 2 : Migration progressive des routes
+- Phase 3 : Migration de la base de données
+- Phase 4 : Décommissionnement de l'ancien code
+
+Chaque phase doit avoir des étapes validables et des points de rollback.
+```
+
+## ✅ Bonnes pratiques avec GitHub Copilot
+
+### Validation obligatoire des plans avant création
+
+Pour garantir que vos plans sont **valides et bien formés**, nous recommandons d'ajouter une instruction dans votre fichier `Agent.md` (ou `.agent.md` selon votre setup) :
+
+```markdown
+## 📋 Validation des Plans d'Implémentation
+
+Avant de créer un plan d'implémentation, **vous DEVEZ toujours :**
+
+1. **Valider le plan en premier** : Utilisez l'outil `plans-validate` avec le contenu du plan
+2. **Attendre la validation** : Assurez-vous que la réponse indique `"isValid": true`
+3. **Corriger les erreurs** : Si des erreurs sont rapportées (path: `/steps/X/kind`, etc.), appliquez les corrections
+4. **Créer uniquement après succès** : Une fois validé, utilisez `plans-create` avec le plan corrigé
+
+### Exemple de flux correct :
+
+```
+[Plan JSON initial]
+↓
+plans-validate → Erreurs détectées ?
+↓                    ↓
+Non ✓            Oui → Corriger
+↓                      ↓
+plans-create      Revalider
+```
+
+### Bénéfices :
+- ✅ Évite les allers-retours de correction
+- ✅ Plans conformes au schéma PlanFlow v1.1.0
+- ✅ Feedback immédiat sur les erreurs de structure
+- ✅ Économise token budget et temps
+```
+
+## 🎯 Fonctionnalités
+
+- **MCP Server** : 9 outils disponibles pour GitHub Copilot
+  - Créer, valider, récupérer, mettre à jour des plans
+  - Navigation dans les étapes (suivant, précédent, contexte)
+  - Gestion des commentaires sur les plans et étapes
+  
+- **Interface Web** :
+  - Review visuelle des plans étape par étape
+  - MiniMap de navigation avec détection de phases
+  - Commentaires sur les étapes
+  - Export des reviews en JSON
+  - Raccourcis clavier (A: approve, R: reject, S: skip)
+
+- **Persistance MongoDB** : Tous vos plans sont sauvegardés et versionnés
+
+## Outils MCP disponibles
+
+| Outil | Description |
+|-------|-------------|
+| `plans-create` | Créer un nouveau plan |
+| `plans-get` | Récupérer un plan par ID |
+| `plans-update` | Mettre à jour un plan existant |
+| `plans-list` | Lister les plans avec filtres |
+| `plans-validate` | Valider un plan (schéma, cycles, etc.) |
+| `steps-get` | Récupérer une étape spécifique |
+| `steps-navigate` | Navigation (étape courante/suivante) |
+| `steps-context` | Contexte d'une étape (dépendances) |
+| `comments-manage` | Gérer les commentaires |
+
+## 🛠️ Commandes utiles
+
+```bash
+# Arrêter Docker
+docker compose down
+
+# Nettoyer la base de données
+docker compose down -v
+
+# Rebuild après modifications
+docker compose up --build
+
+# Logs en temps réel
+docker compose logs -f
+```
+
+## 📝 Licence
 
 MIT
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request

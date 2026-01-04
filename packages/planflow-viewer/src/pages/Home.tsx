@@ -106,9 +106,6 @@ export default function Home() {
           <div className="text-center py-12 text-muted-foreground">
             <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p>Aucun plan disponible</p>
-            <Link to="/plans/new" className="text-foreground underline mt-2 inline-block">
-              Créer votre premier plan
-            </Link>
           </div>
         )}
       </div>

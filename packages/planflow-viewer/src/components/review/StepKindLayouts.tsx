@@ -380,6 +380,11 @@ export function DocumentationLayout({ step }: StepKindLayoutProps) {
 export function CustomLayout({ step }: StepKindLayoutProps) {
   const action = step.actions?.find((a: any) => a.type === 'custom') || step.actions?.[0] as any;
   
+  // Gérer les actions run_command dans CustomLayout
+  if (action?.type === 'run_command' || (action?.command && !action?.type)) {
+    return <RunCommandLayout step={step} />;
+  }
+  
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
@@ -401,7 +406,7 @@ export function CustomLayout({ step }: StepKindLayoutProps) {
         </div>
       )}
 
-      {action && Object.keys(action).length > 0 && (
+      {action && Object.keys(action).length > 2 && (
         <div className="p-4 bg-secondary rounded-lg">
           <div className="text-xs text-muted-foreground mb-2">Détails</div>
           <pre className="text-xs font-mono whitespace-pre-wrap">

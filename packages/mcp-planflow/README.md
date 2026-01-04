@@ -13,7 +13,7 @@ MCP PlanFlow provides AI assistants with structured tools to create, validate, a
 - **🗄️ Persistence**: MongoDB storage with indexing and filtering
 - **🏗️ Clean Architecture**: Hexagonal architecture with clear separation of concerns
 - **💉 Dependency Injection**: TSyringe for testable, maintainable code
-- **🔧 MCP Integration**: Full Model Context Protocol support via stdio transport
+- **🔧 MCP Integration**: Dual transport (StreamableHTTP + stdio)
 
 ## Architecture
 
@@ -67,43 +67,66 @@ npm run build
 
 ## Configuration
 
-Create a `.env` file with the following variables:
+Create a `.env` file:
 
 ```env
 MONGODB_URI=mongodb://localhost:27017
 MONGODB_DB_NAME=planflow
-MONGODB_COLLECTION_NAME=plans
 NODE_ENV=development
 ```
 
 ## Usage
 
-### Running the MCP Server
+### Mode 1: HTTP Server (StreamableHTTP)
 
+Lance le serveur HTTP et connecte-toi depuis VS Code. Idéal pour le développement.
+
+**Démarrer le serveur:**
 ```bash
-npm start
+HTTP_ENABLED=true MCP_ENABLED=false npm start
 ```
 
-The server runs on stdio transport and communicates via MCP protocol.
+**Config VS Code** (`.vscode/mcp.json`):
+```json
+{
+  "mcpServers": {
+    "planflow": {
+      "url": "http://localhost:3000/mcp"
+    }
+  }
+}
+```
 
-### MCP Configuration for VS Code
+✅ Avantages: hot reload, debugging facile, logs en temps réel
 
-Add to your MCP settings (`.vscode/mcp-config.json` or global config):
+### Mode 2: Stdio (Child Process)
 
+VS Code lance une instance dédiée du serveur. Mode production.
+
+**Build requis:**
+```bash
+npm run build
+```
+
+**Config VS Code** (`.vscode/mcp.json`):
 ```json
 {
   "mcpServers": {
     "planflow": {
       "command": "node",
-      "args": ["/path/to/mcp-planflow/dist/index.js"],
+      "args": ["${workspaceFolder}/packages/mcp-planflow/dist/index.js"],
       "env": {
         "MONGODB_URI": "mongodb://localhost:27017",
-        "MONGODB_DB_NAME": "planflow"
+        "MONGODB_DB_NAME": "planflow",
+        "HTTP_ENABLED": "false",
+        "MCP_ENABLED": "true"
       }
     }
   }
 }
 ```
+
+✅ Avantages: simple, pas de serveur séparé, isolation complète
 
 ### Available MCP Tools
 
@@ -231,29 +254,18 @@ See the `examples/` directory for complete plan examples:
 
 ## Development
 
-### Build
 ```bash
+# Build
 npm run build
-```
 
-### Watch Mode
-```bash
-npm run build:watch
-```
+# Dev avec hot reload
+npm run dev
 
-### Run Tests
-```bash
+# Tests
 npm test
-```
 
-### Linting
-```bash
+# Linting
 npm run lint
-```
-
-### Format Code
-```bash
-npm run format
 ```
 
 ## Project Structure
@@ -286,7 +298,8 @@ Handles external concerns:
 - `tsyringe` - Dependency injection
 - `mongodb` - Database driver
 - `ajv` - JSON Schema validation
-- `nanoid` - Unique ID generation
+- `nanoid` - UniquStreamableHTTP + stdio transports
+- **HTTP Server**: Express API + MCP endpoint
 
 ### Development
 - `typescript` - Type checking

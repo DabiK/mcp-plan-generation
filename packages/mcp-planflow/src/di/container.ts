@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { container } from 'tsyringe';
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { MongoDBConnection } from '../infrastructure/persistence/mongodb/MongoDBConnection';
 import { MongoDBPlanRepository } from '../infrastructure/persistence/mongodb/MongoDBPlanRepository';
 import { IPlanRepository } from '../domain/repositories/IPlanRepository';
@@ -16,6 +17,7 @@ import { GetPlanCommentsUseCase, AddPlanCommentUseCase, UpdatePlanCommentUseCase
 import { StepNavigationUseCases } from '../application/use-cases/StepNavigationUseCases';
 import { McpServer } from '../infrastructure/mcp/McpServer';
 import { HttpServer } from '../infrastructure/http/HttpServer';
+import { McpSseHandler } from '../infrastructure/http/McpSseHandler';
 
 export function setupContainer(): void {
   // Register infrastructure services as singletons
@@ -46,6 +48,15 @@ export function setupContainer(): void {
 
   // Register MCP server
   container.registerSingleton(McpServer);
+  
+  // Register MCP Server instance for SSE
+  const mcpServerInstance = container.resolve(McpServer);
+  container.register<Server>('McpServerInstance', {
+    useValue: mcpServerInstance.getServer(),
+  });
+
+  // Register SSE handler
+  container.registerSingleton(McpSseHandler);
 
   // Register HTTP server
   container.registerSingleton(HttpServer);
