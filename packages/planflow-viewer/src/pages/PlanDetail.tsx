@@ -10,7 +10,7 @@ export default function PlanDetail() {
   const navigate = useNavigate();
   const { data: plan, isLoading, error } = usePlanDetail(id);
   const deleteMutation = useDeletePlan();
-  const [activeTab, setActiveTab] = useState<'overview' | 'graph' | 'steps' | 'json'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'review' | 'graph' | 'steps' | 'json'>('overview');
   
   const flowGraph = useMemo(() => {
     if (!plan) return { nodes: [], edges: [] };
@@ -103,6 +103,12 @@ export default function PlanDetail() {
             Overview
           </button>
           <button
+            onClick={() => navigate(`/plans/${id}/review`)}
+            className="pb-3 text-sm font-medium border-b-2 border-transparent text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Review
+          </button>
+          <button
             onClick={() => setActiveTab('graph')}
             className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'graph'
@@ -158,7 +164,7 @@ export default function PlanDetail() {
                   <div>
                     <dt className="text-sm text-muted-foreground">Tags</dt>
                     <dd className="flex flex-wrap gap-2 mt-1">
-                      {plan.metadata.tags.map((tag) => (
+                      {plan.metadata.tags.map((tag: string) => (
                         <span
                           key={tag}
                           className="px-2 py-1 bg-secondary text-xs"
@@ -182,7 +188,7 @@ export default function PlanDetail() {
 
         {activeTab === 'steps' && (
           <div className="border border-border">
-            {plan.steps.map((step, index) => (
+            {plan.steps.map((step: any, index: number) => (
               <div
                 key={step.id}
                 className={`p-4 ${index !== 0 ? 'border-t border-border' : ''}`}

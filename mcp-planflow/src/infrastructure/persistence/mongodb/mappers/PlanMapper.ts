@@ -33,11 +33,7 @@ export interface MongoDBPlanDocument {
       value: number;
       unit: string;
     };
-    actions: Array<{
-      type: string;
-      description: string;
-      payload?: Record<string, unknown>;
-    }>;
+    actions: Action[];
     validation?: {
       criteria: string[];
       automatedTests?: string[];

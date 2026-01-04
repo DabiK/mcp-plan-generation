@@ -6,6 +6,7 @@ import Home from '@/pages/Home';
 import PlanList from '@/pages/PlanList';
 import PlanDetail from '@/pages/PlanDetail';
 import PlanCreate from '@/pages/PlanCreate';
+import { PlanReview } from '@/pages/PlanReview';
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
             <Route index element={<Home />} />
             <Route path="plans" element={<PlanList />} />
             <Route path="plans/:id" element={<PlanDetail />} />
+            <Route path="plans/:id/review" element={<PlanReview />} />
             <Route path="plans/new" element={<PlanCreate />} />
           </Route>
         </Routes>

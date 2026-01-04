@@ -41,3 +41,28 @@ export interface PlanStats {
   byStatus: Record<string, number>;
   byType: Record<string, number>;
 }
+
+// Step Review types
+export type ReviewDecision = 'approved' | 'rejected' | 'skipped';
+
+export interface StepComment {
+  id: string;
+  stepId: string;
+  content: string;
+  timestamp: string;
+  author?: string;
+}
+
+export interface StepReview {
+  stepId: string;
+  decision: ReviewDecision;
+  comments: StepComment[];
+  timestamp: string;
+}
+
+export interface PlanReviewState {
+  planId: string;
+  reviews: Record<string, StepReview>; // stepId -> review
+  currentStepIndex: number;
+  isComplete: boolean;
+}

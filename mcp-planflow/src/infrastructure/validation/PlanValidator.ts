@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe';
 import Ajv, { ValidateFunction } from 'ajv';
 import addFormats from 'ajv-formats';
-import planflowSchema from './schemas/planflow-v1.0.0.json';
+import planflowSchema from './schemas/planflow-v1.1.0.json';
 
 export interface ValidationResult {
   isValid: boolean;

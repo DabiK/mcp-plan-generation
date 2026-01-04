@@ -1,0 +1,168 @@
+{
+  "schemaVersion": "1.1.0",
+  "planType": "feature",
+  "metadata": {
+    "title": "Add User Profile Component",
+    "description": "Create a reusable React component for displaying user profiles with TypeScript",
+    "author": "frontend-team",
+    "tags": ["react", "typescript", "component", "ui"]
+  },
+  "plan": {
+    "objective": "Implement a type-safe, reusable UserProfile component",
+    "scope": "Frontend components directory",
+    "constraints": [
+      "Must use TypeScript strict mode",
+      "Must follow project component conventions",
+      "Must be responsive"
+    ],
+    "successCriteria": [
+      "Component renders correctly with mock data",
+      "Props are properly typed",
+      "Component is exported from index"
+    ]
+  },
+  "steps": [
+    {
+      "id": "create-user-profile-types",
+      "title": "Create UserProfile type definitions",
+      "description": "Define TypeScript interfaces for user profile data structure",
+      "kind": "create_file",
+      "status": "pending",
+      "dependsOn": [],
+      "estimatedDuration": {
+        "value": 15,
+        "unit": "minutes"
+      },
+      "actions": [
+        {
+          "type": "create_file",
+          "filePath": "src/types/UserProfile.ts",
+          "content": "export interface UserProfile {\n  id: string;\n  name: string;\n  email: string;\n  avatar?: string;\n  bio?: string;\n  role: 'admin' | 'user' | 'guest';\n  createdAt: string;\n}\n\nexport interface UserProfileProps {\n  user: UserProfile;\n  onEdit?: (userId: string) => void;\n  showActions?: boolean;\n}",
+          "description": "Create type definitions for user profile"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "Types compile without errors",
+          "All required fields are present"
+        ]
+      }
+    },
+    {
+      "id": "create-user-profile-component",
+      "title": "Create UserProfile component",
+      "description": "Implement the main UserProfile React component with proper styling",
+      "kind": "create_file",
+      "status": "pending",
+      "dependsOn": ["create-user-profile-types"],
+      "estimatedDuration": {
+        "value": 45,
+        "unit": "minutes"
+      },
+      "actions": [
+        {
+          "type": "create_file",
+          "filePath": "src/components/UserProfile.tsx",
+          "content": "import React from 'react';\nimport type { UserProfileProps } from '../types/UserProfile';\nimport './UserProfile.css';\n\nexport function UserProfile({ user, onEdit, showActions = true }: UserProfileProps) {\n  const handleEdit = () => {\n    if (onEdit) {\n      onEdit(user.id);\n    }\n  };\n\n  return (\n    <div className=\"user-profile\">\n      <div className=\"user-profile-header\">\n        {user.avatar && (\n          <img \n            src={user.avatar} \n            alt={user.name} \n            className=\"user-profile-avatar\"\n          />\n        )}\n        <div className=\"user-profile-info\">\n          <h2 className=\"user-profile-name\">{user.name}</h2>\n          <p className=\"user-profile-email\">{user.email}</p>\n          <span className=\"user-profile-role\">{user.role}</span>\n        </div>\n      </div>\n      \n      {user.bio && (\n        <p className=\"user-profile-bio\">{user.bio}</p>\n      )}\n      \n      {showActions && (\n        <div className=\"user-profile-actions\">\n          <button onClick={handleEdit} className=\"btn-edit\">\n            Edit Profile\n          </button>\n        </div>\n      )}\n    </div>\n  );\n}",
+          "description": "Create the main UserProfile component"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "Component renders without errors",
+          "Props are properly typed",
+          "Component is responsive"
+        ]
+      }
+    },
+    {
+      "id": "create-user-profile-styles",
+      "title": "Add UserProfile styles",
+      "description": "Create CSS file with responsive styles for the UserProfile component",
+      "kind": "create_file",
+      "status": "pending",
+      "dependsOn": ["create-user-profile-component"],
+      "estimatedDuration": {
+        "value": 30,
+        "unit": "minutes"
+      },
+      "actions": [
+        {
+          "type": "create_file",
+          "filePath": "src/components/UserProfile.css",
+          "content": ".user-profile {\n  padding: 1.5rem;\n  border: 1px solid #e5e7eb;\n  border-radius: 0.5rem;\n  background: white;\n  max-width: 500px;\n}\n\n.user-profile-header {\n  display: flex;\n  gap: 1rem;\n  margin-bottom: 1rem;\n}\n\n.user-profile-avatar {\n  width: 64px;\n  height: 64px;\n  border-radius: 50%;\n  object-fit: cover;\n}\n\n.user-profile-info {\n  flex: 1;\n}\n\n.user-profile-name {\n  margin: 0;\n  font-size: 1.25rem;\n  font-weight: 600;\n  color: #111827;\n}\n\n.user-profile-email {\n  margin: 0.25rem 0;\n  color: #6b7280;\n  font-size: 0.875rem;\n}\n\n.user-profile-role {\n  display: inline-block;\n  padding: 0.25rem 0.75rem;\n  background: #dbeafe;\n  color: #1e40af;\n  border-radius: 9999px;\n  font-size: 0.75rem;\n  font-weight: 500;\n  text-transform: capitalize;\n}\n\n.user-profile-bio {\n  color: #374151;\n  line-height: 1.5;\n  margin: 1rem 0;\n}\n\n.user-profile-actions {\n  display: flex;\n  gap: 0.5rem;\n  margin-top: 1rem;\n}\n\n.btn-edit {\n  padding: 0.5rem 1rem;\n  background: #3b82f6;\n  color: white;\n  border: none;\n  border-radius: 0.375rem;\n  cursor: pointer;\n  font-weight: 500;\n  transition: background 0.2s;\n}\n\n.btn-edit:hover {\n  background: #2563eb;\n}\n\n@media (max-width: 640px) {\n  .user-profile-header {\n    flex-direction: column;\n    align-items: center;\n    text-align: center;\n  }\n}",
+          "description": "Add CSS styles for the UserProfile component"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "Styles apply correctly",
+          "Component is responsive on mobile"
+        ]
+      }
+    },
+    {
+      "id": "export-component",
+      "title": "Export UserProfile from components index",
+      "description": "Add UserProfile export to the components barrel file",
+      "kind": "edit_file",
+      "status": "pending",
+      "dependsOn": ["create-user-profile-component"],
+      "estimatedDuration": {
+        "value": 5,
+        "unit": "minutes"
+      },
+      "actions": [
+        {
+          "type": "edit_file",
+          "filePath": "src/components/index.ts",
+          "before": "export { Button } from './Button';\nexport { Card } from './Card';\nexport { Input } from './Input';",
+          "after": "export { Button } from './Button';\nexport { Card } from './Card';\nexport { Input } from './Input';\nexport { UserProfile } from './UserProfile';",
+          "description": "Add UserProfile to component exports",
+          "lineNumbers": {
+            "start": 1,
+            "end": 3
+          }
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "Import works from components barrel",
+          "No circular dependencies"
+        ]
+      }
+    },
+    {
+      "id": "create-test-file",
+      "title": "Create UserProfile test suite",
+      "description": "Add unit tests for the UserProfile component using React Testing Library",
+      "kind": "test",
+      "status": "pending",
+      "dependsOn": ["create-user-profile-component"],
+      "estimatedDuration": {
+        "value": 1,
+        "unit": "hours"
+      },
+      "actions": [
+        {
+          "type": "create_file",
+          "filePath": "src/components/__tests__/UserProfile.test.tsx",
+          "content": "import { render, screen, fireEvent } from '@testing-library/react';\nimport { UserProfile } from '../UserProfile';\nimport type { UserProfile as UserProfileType } from '../../types/UserProfile';\n\nconst mockUser: UserProfileType = {\n  id: '1',\n  name: 'John Doe',\n  email: 'john@example.com',\n  role: 'user',\n  createdAt: '2024-01-01T00:00:00Z',\n};\n\ndescribe('UserProfile', () => {\n  it('renders user information', () => {\n    render(<UserProfile user={mockUser} />);\n    \n    expect(screen.getByText('John Doe')).toBeInTheDocument();\n    expect(screen.getByText('john@example.com')).toBeInTheDocument();\n    expect(screen.getByText('user')).toBeInTheDocument();\n  });\n\n  it('calls onEdit when edit button is clicked', () => {\n    const onEdit = jest.fn();\n    render(<UserProfile user={mockUser} onEdit={onEdit} />);\n    \n    fireEvent.click(screen.getByText('Edit Profile'));\n    expect(onEdit).toHaveBeenCalledWith('1');\n  });\n\n  it('hides actions when showActions is false', () => {\n    render(<UserProfile user={mockUser} showActions={false} />);\n    \n    expect(screen.queryByText('Edit Profile')).not.toBeInTheDocument();\n  });\n\n  it('renders bio when provided', () => {\n    const userWithBio = { ...mockUser, bio: 'Software engineer' };\n    render(<UserProfile user={userWithBio} />);\n    \n    expect(screen.getByText('Software engineer')).toBeInTheDocument();\n  });\n});",
+          "description": "Create comprehensive test suite"
+        },
+        {
+          "type": "test",
+          "testCommand": "npm test UserProfile.test.tsx",
+          "coverage": 90,
+          "description": "Run UserProfile tests and verify coverage"
+        }
+      ],
+      "validation": {
+        "criteria": [
+          "All tests pass",
+          "Coverage is above 90%"
+        ]
+      }
+    }
+  ]
+}

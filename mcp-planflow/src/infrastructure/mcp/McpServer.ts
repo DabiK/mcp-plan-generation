@@ -50,7 +50,7 @@ export class McpServer {
         {
           name: 'get-plan-format',
           description:
-            'Get the PlanFlow JSON schema format specification, including version, constraints, and examples',
+            'Get the PlanFlow JSON schema v1.1.0 format specification with typed actions (create_file, edit_file, delete_file, run_command, test, review, documentation, custom), including examples, constraints, and detailed action type definitions',
           inputSchema: {
             type: 'object',
             properties: {},
@@ -60,13 +60,13 @@ export class McpServer {
         {
           name: 'validate-plan',
           description:
-            'Validate a PlanFlow implementation plan against the JSON schema and business rules (cyclic dependencies, etc.)',
+            'Validate a PlanFlow v1.1.0 implementation plan against the JSON schema with typed actions. Checks: schema compliance, unique step IDs, valid dependencies, cyclic dependency detection, action type validation (create_file, edit_file, etc.), and business rules',
           inputSchema: {
             type: 'object',
             properties: {
               plan: {
                 type: 'object',
-                description: 'The plan object to validate',
+                description: 'The plan object to validate against v1.1.0 schema',
               },
             },
             required: ['plan'],
@@ -74,13 +74,13 @@ export class McpServer {
         },
         {
           name: 'create-plan',
-          description: 'Create a new implementation plan in the database',
+          description: 'Create a new implementation plan in the database following PlanFlow v1.1.0 schema with typed actions. Each step should have an actions array with specific action types (create_file, edit_file, delete_file, run_command, test, review, documentation, or custom)',
           inputSchema: {
             type: 'object',
             properties: {
               planData: {
                 type: 'object',
-                description: 'The complete plan data following PlanFlow schema',
+                description: 'The complete plan data following PlanFlow v1.1.0 schema with typed actions',
               },
             },
             required: ['planData'],

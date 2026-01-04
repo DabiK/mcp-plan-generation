@@ -7,11 +7,97 @@ export interface Duration {
   unit: 'minutes' | 'hours' | 'days';
 }
 
-export interface Action {
-  type: string;
+// Action types based on schema v1.1.0
+export type CreateFileAction = {
+  type: 'create_file' | 'create_directory';
+  filePath?: string;
+  content?: string;
+  description?: string;
+  payload?: {
+    file?: string;
+    path?: string;
+    content?: string;
+  };
+};
+
+export type EditFileAction = {
+  type: 'edit_file';
+  filePath?: string;
+  before?: string;
+  after?: string;
+  description?: string;
+  lineNumbers?: {
+    start: number;
+    end: number;
+  };
+  payload?: {
+    file?: string;
+    changes?: string;
+  };
+};
+
+export type DeleteFileAction = {
+  type: 'delete_file';
+  filePath: string;
+  reason?: string;
+  description?: string;
+};
+
+export type RunCommandAction = {
+  type: 'run_command' | 'terminal';
+  command?: string;
+  workingDirectory?: string;
+  expectedOutput?: string;
+  description?: string;
+  payload?: {
+    command?: string;
+  };
+};
+
+export type TestAction = {
+  type: 'test' | 'manual_test';
+  testCommand?: string;
+  testFiles?: string[];
+  coverage?: number;
+  description?: string;
+  payload?: {
+    scenarios?: string[];
+  };
+};
+
+export type ReviewAction = {
+  type: 'review' | 'code_review';
+  checklistItems?: string[];
+  reviewers?: string[];
+  description?: string;
+  payload?: {
+    checks?: string[];
+  };
+};
+
+export type DocumentationAction = {
+  type: 'documentation';
+  sections?: string[];
+  format?: 'markdown' | 'jsdoc' | 'openapi' | 'readme';
+  filePath?: string;
+  description?: string;
+};
+
+export type CustomAction = {
+  type: 'custom';
   description: string;
   payload?: Record<string, unknown>;
-}
+};
+
+export type Action = 
+  | CreateFileAction 
+  | EditFileAction 
+  | DeleteFileAction 
+  | RunCommandAction 
+  | TestAction 
+  | ReviewAction 
+  | DocumentationAction 
+  | CustomAction;
 
 export interface ValidationCriteria {
   criteria: string[];

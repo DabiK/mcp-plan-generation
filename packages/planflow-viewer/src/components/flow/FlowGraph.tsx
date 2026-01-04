@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useMemo } from 'react';
 import ReactFlow, {
     useNodesState,
     MiniMap,
@@ -42,13 +42,6 @@ export default function FlowGraph({ nodes: initialNodes, edges: initialEdges }: 
                 />
                 <Controls
                     className="border border-border bg-background"
-                    style={{
-                        button: {
-                            backgroundColor: '#09090b',
-                            color: '#fafafa',
-                            borderColor: '#27272a',
-                        }
-                    }}
                 />
                 <MiniMap
                     nodeColor="#27272a"

@@ -1,7 +1,7 @@
 import { injectable, inject } from 'tsyringe';
 import { IPlanRepository } from '../../domain/repositories/IPlanRepository';
 import { PlanValidator } from '../../infrastructure/validation/PlanValidator';
-import { PlanDTO } from '../dtos';
+import { PlanDTO, StepAction } from '../dtos';
 import { Plan, Step } from '../../domain/entities';
 import { StepId, PlanId } from '../../domain/value-objects';
 import { PlanNotFoundError } from '../../domain/errors/PlanNotFoundError';
@@ -29,13 +29,7 @@ export interface UpdatePlanInput {
     status: string;
     dependsOn: string[];
     estimatedDuration?: string;
-    actions?: Array<{
-      type: string;
-      description: string;
-      tool?: string;
-      command?: string;
-      parameters?: Record<string, any>;
-    }>;
+    actions?: StepAction[];
     validation?: {
       criteria: string[];
       method: string;

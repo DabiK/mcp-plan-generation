@@ -18,7 +18,7 @@ export function planToFlowGraph(plan: PlanDTO): { nodes: Node[]; edges: Edge[] }
       return levels.findIndex(level => level.includes(stepId));
     }
     
-    const step = plan.steps.find(s => s.id === stepId);
+    const step = plan.steps.find((s: any) => s.id === stepId);
     if (!step) return 0;
     
     if (!step.dependsOn || step.dependsOn.length === 0) {
@@ -28,7 +28,7 @@ export function planToFlowGraph(plan: PlanDTO): { nodes: Node[]; edges: Edge[] }
       return 0;
     }
     
-    const maxDependencyLevel = Math.max(...step.dependsOn.map(depId => getLevel(depId)));
+    const maxDependencyLevel = Math.max(...step.dependsOn.map((depId: string) => getLevel(depId)));
     const level = maxDependencyLevel + 1;
     
     if (!levels[level]) levels[level] = [];
@@ -39,10 +39,10 @@ export function planToFlowGraph(plan: PlanDTO): { nodes: Node[]; edges: Edge[] }
   }
   
   // Calculate levels for all steps
-  plan.steps.forEach(step => getLevel(step.id));
+  plan.steps.forEach((step: any) => getLevel(step.id));
   
   // Create nodes with positions
-  plan.steps.forEach(step => {
+  plan.steps.forEach((step: any) => {
     const level = levels.findIndex(l => l.includes(step.id));
     const positionInLevel = levels[level].indexOf(step.id);
     const levelWidth = levels[level].length;
@@ -78,7 +78,7 @@ export function planToFlowGraph(plan: PlanDTO): { nodes: Node[]; edges: Edge[] }
     
     // Create edges for dependencies
     if (step.dependsOn) {
-      step.dependsOn.forEach(depId => {
+      step.dependsOn.forEach((depId: string) => {
         edges.push({
           id: `${depId}-${step.id}`,
           source: depId,
