@@ -217,6 +217,42 @@ plans-create      Revalider
 | `steps-context` | Contexte d'une étape (dépendances) |
 | `comments-manage` | Gérer les commentaires |
 
+## Galerie d'écrans
+
+### 🏠 Tableau de bord
+![Tableau de bord PlanFlow avec plans récents](docs/screenshots/home.png)
+
+La page d'accueil affiche :
+- Statistiques rapides (Total Plans, Pending, In Progress, Completed)
+- Accès rapide pour voir tous les plans
+- Liste des plans récents
+
+### 🔍 Vue détaillée du plan
+![Vue détaillée avec onglets Overview, Review, Graph, Steps, JSON](docs/screenshots/detail.png)
+
+L'interface de detail affiche :
+- **Overview** : Métadonnées, objectif, scope, contraintes, critères de succès
+- Informations du plan (ID, tags, version)
+- Navigation entre onglets (Review, Graph, Steps)
+
+### ⭐ Interface de review
+![Interface complète de review avec minimap et actions](docs/screenshots/review.png)
+
+Points clés de la review :
+- **MiniMap** : Navigation visuelle par phases (Setup, Implementation, Testing...)
+- **Étape active** : Affichage détaillé avec commandes shell, descriptions, durée estimée
+- **Actions rapides** : Raccourcis clavier (A=Approuve, R=Rejette, S=Passe)
+- **Commentaires** : Ajout de notes directement sur les étapes
+
+### 🤖 Intégration GitHub Copilot
+![VS Code avec review côté et Copilot Chat côté droit](docs/screenshots/preview-vscode.png)
+
+Workflow complet :
+- **Gauche** : Interface de review en temps réel
+- **Droite** : GitHub Copilot Chat avec les outils MCP intégrés
+- **Bottom** : Fichiers modifiés et terminal
+- Création et validation du plan directement via chat
+
 ## 🛠️ Commandes utiles
 
 ```bash
