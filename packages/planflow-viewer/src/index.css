@@ -26,3 +26,7 @@ body {
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
 }
+
+.container-fluid {
+  @apply w-full max-w-none mx-auto px-6;
+}

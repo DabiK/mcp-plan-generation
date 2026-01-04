@@ -142,9 +142,18 @@ export function StepReviewCard({
                 step.status === 'completed' ? 'bg-green-500/10 text-green-500' :
                 step.status === 'in_progress' ? 'bg-blue-500/10 text-blue-500' :
                 step.status === 'failed' ? 'bg-red-500/10 text-red-500' :
+                step.status === 'blocked' ? 'bg-orange-500/10 text-orange-500' :
+                step.status === 'skipped' ? 'bg-yellow-500/10 text-yellow-500' :
+                step.status === 'pending' ? 'bg-blue-500/10 text-blue-500' :
                 'bg-gray-500/10 text-gray-500'
               }`}>
-                {step.status}
+                {step.status === 'completed' ? 'Terminé' :
+                 step.status === 'in_progress' ? 'En cours' :
+                 step.status === 'failed' ? 'Échoué' :
+                 step.status === 'blocked' ? 'Bloqué' :
+                 step.status === 'skipped' ? 'Ignoré' :
+                 step.status === 'pending' ? 'En attente' :
+                 step.status}
               </span>
             </div>
           </div>

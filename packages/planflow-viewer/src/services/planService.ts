@@ -161,4 +161,17 @@ export const planService = {
     }
     return res.json();
   },
+
+  async setStepReviewStatus(planId: string, stepId: string, decision: 'approved' | 'rejected' | 'skipped', reviewer?: string) {
+    const res = await fetch(`${API_BASE}/api/plans/${planId}/steps/${stepId}/review`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decision, reviewer }),
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.message || 'Failed to set review status');
+    }
+    return res.json();
+  },
 };

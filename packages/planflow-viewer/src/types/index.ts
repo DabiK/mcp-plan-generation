@@ -33,6 +33,11 @@ export interface StepDTO {
     automatedTests?: string[];
   };
   comments?: StepCommentDTO[];
+  reviewStatus?: {
+    decision: 'approved' | 'rejected' | 'skipped';
+    timestamp: string;
+    reviewer?: string;
+  };
 }
 
 export interface PlanDTO {

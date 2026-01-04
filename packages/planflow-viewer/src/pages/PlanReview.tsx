@@ -6,7 +6,6 @@ import { usePlanComments } from '@/hooks/usePlanComments';
 import { StepReviewCard } from '@/components/review/StepReviewCard';
 import { ReviewSummaryHeader } from '@/components/review/ReviewSummaryHeader';
 import { MiniMap } from '@/components/review/MiniMap';
-import { CompactStepCard } from '@/components/review/CompactStepCard';
 import { PlanComments } from '@/components/PlanComments';
 import { detectPhases, getCurrentPhase, getPhaseStats } from '@/lib/phaseDetection';
 import type { ReviewDecision } from '@/types';
@@ -15,8 +14,6 @@ export function PlanReview() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: plan, isLoading } = usePlanDetail(id || '');
-  const [compactMode, setCompactMode] = useState(true); // Compact par défaut
-  const [expandedStep, setExpandedStep] = useState<string | null>(null); // Step expanded in compact mode
   const [showPlanComments, setShowPlanComments] = useState(false); // Panneau de commentaires
   
   const {
@@ -32,7 +29,7 @@ export function PlanReview() {
     getStepReview,
     getReviewStats,
     setCurrentStepIndex,
-  } = useStepReviews(id || '');
+  } = useStepReviews(id || '', plan);
 
   const {
     comments: planComments,
@@ -62,6 +59,11 @@ export function PlanReview() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
+      // Ignore if modifier keys are pressed (Cmd, Ctrl, Alt, Shift)
+      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) {
+        return;
+      }
+      
       if (e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) {
         return; // Don't trigger shortcuts when typing
       }
@@ -71,98 +73,31 @@ export function PlanReview() {
 
       switch (e.key.toLowerCase()) {
         case 'a':
-          if (compactMode) {
-            // En mode compact, approuver l'étape courante et passer à la suivante
-            if (plan && currentStepIndex < totalSteps) {
-              const step = plan.steps[currentStepIndex];
-              addReview(step.id, 'approved');
-              if (currentStepIndex < totalSteps - 1) {
-                nextStep();
-                // Unfold la nouvelle étape courante (avec un petit délai pour s'assurer que l'état est mis à jour)
-                setTimeout(() => {
-                  if (plan && reviewState.currentStepIndex < plan.steps.length) {
-                    setExpandedStep(plan.steps[reviewState.currentStepIndex].id);
-                  }
-                }, 0);
-              } else {
-                setExpandedStep(null);
-              }
-            }
-          } else if (currentStep) {
+          if (currentStep) {
             addReview(currentStep.id, 'approved');
             if (!isLastStep) nextStep();
           }
           break;
         case 'r':
-          if (compactMode) {
-            // En mode compact, rejeter l'étape courante et passer à la suivante
-            if (plan && currentStepIndex < totalSteps) {
-              const step = plan.steps[currentStepIndex];
-              addReview(step.id, 'rejected');
-              if (currentStepIndex < totalSteps - 1) {
-                nextStep();
-                setTimeout(() => {
-                  if (plan && reviewState.currentStepIndex < plan.steps.length) {
-                    setExpandedStep(plan.steps[reviewState.currentStepIndex].id);
-                  }
-                }, 0);
-              } else {
-                setExpandedStep(null);
-              }
-            }
-          } else if (currentStep) {
+          if (currentStep) {
             addReview(currentStep.id, 'rejected');
             if (!isLastStep) nextStep();
           }
           break;
         case 's':
-          if (compactMode) {
-            // En mode compact, skipper l'étape courante et passer à la suivante
-            if (plan && currentStepIndex < totalSteps) {
-              const step = plan.steps[currentStepIndex];
-              addReview(step.id, 'skipped');
-              if (currentStepIndex < totalSteps - 1) {
-                nextStep();
-                setTimeout(() => {
-                  if (plan && reviewState.currentStepIndex < plan.steps.length) {
-                    setExpandedStep(plan.steps[reviewState.currentStepIndex].id);
-                  }
-                }, 0);
-              } else {
-                setExpandedStep(null);
-              }
-            }
-          } else if (currentStep) {
+          if (currentStep) {
             addReview(currentStep.id, 'skipped');
             if (!isLastStep) nextStep();
           }
           break;
         case 'arrowleft':
           if (currentStepIndex > 0) {
-            const newIndex = currentStepIndex - 1;
             previousStep();
-            if (compactMode && plan) {
-              // En mode compact, unfold l'étape précédente
-              setTimeout(() => {
-                if (plan && reviewState.currentStepIndex < plan.steps.length) {
-                  setExpandedStep(plan.steps[reviewState.currentStepIndex].id);
-                }
-              }, 0);
-            }
           }
           break;
         case 'arrowright':
           if (currentStepIndex < totalSteps - 1) {
-            const newIndex = currentStepIndex + 1;
             nextStep();
-            if (compactMode && plan) {
-              // En mode compact, unfold l'étape suivante
-              setTimeout(() => {
-                if (plan && reviewState.currentStepIndex < plan.steps.length) {
-                  setExpandedStep(plan.steps[reviewState.currentStepIndex].id);
-                }
-              }, 0);
-            }
           }
           break;
       }
@@ -170,7 +105,7 @@ export function PlanReview() {
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [currentStep, isLastStep, reviewState.currentStepIndex, addReview, nextStep, previousStep, compactMode, plan, setExpandedStep]);
+  }, [currentStep, isLastStep, reviewState.currentStepIndex, addReview, nextStep, previousStep]);
 
   // Auto-complete when reaching the end
   useEffect(() => {
@@ -387,18 +322,20 @@ export function PlanReview() {
         } : undefined}
       />
 
-      <div className="flex gap-6 p-6">
-        {/* MiniMap sidebar */}
-        <MiniMap
-          steps={plan.steps}
-          phases={phases}
-          currentStepIndex={reviewState.currentStepIndex}
-          onStepClick={(idx) => setCurrentStepIndex(idx)}
-          reviewedSteps={reviewedSteps}
-        />
+      <div className="container-fluid py-6">
+        <div className="flex gap-6">
+          {/* MiniMap sidebar */}
+          <MiniMap
+            steps={plan.steps}
+            phases={phases}
+            currentStepIndex={reviewState.currentStepIndex}
+            onStepClick={(idx) => setCurrentStepIndex(idx)}
+            reviewedSteps={reviewedSteps}
+            getStepReviewDecision={(stepId) => getStepReview(stepId)?.decision}
+          />
 
-        {/* Main content area */}
-        <div className="flex-1">
+          {/* Main content area */}
+          <div className="flex-1">
           {/* Mode toggle */}
           <div className="max-w-4xl mx-auto mb-4 flex items-center justify-between">
             <button
@@ -411,151 +348,41 @@ export function PlanReview() {
               Retour au plan
             </button>
 
-            <div className="flex items-center gap-3">
-              {/* Compact/Detailed toggle */}
-              <div className="flex items-center gap-2 bg-secondary border border-border rounded-lg p-1">
-                <button
-                  onClick={() => setCompactMode(true)}
-                  className={`px-3 py-1.5 rounded text-xs transition-colors ${
-                    compactMode 
-                      ? 'bg-foreground text-background' 
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  Compact
-                </button>
-                <button
-                  onClick={() => setCompactMode(false)}
-                  className={`px-3 py-1.5 rounded text-xs transition-colors ${
-                    !compactMode 
-                      ? 'bg-foreground text-background' 
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  Détaillé
-                </button>
-              </div>
-
-              <button
-                onClick={resetReview}
-                className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Réinitialiser
-              </button>
-            </div>
+            <button
+              onClick={resetReview}
+              className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Réinitialiser
+            </button>
           </div>
 
-          {/* Compact mode: all steps visible */}
-          {compactMode ? (
-            <div className="max-w-4xl mx-auto space-y-2">
-              {plan.steps.map((step: any, idx: number) => {
-                const review = getStepReview(step.id);
-                const isCurrent = idx === reviewState.currentStepIndex;
-                const isExpanded = expandedStep === step.id;
-
-                return (
-                  <div key={step.id}>
-                    {/* Compact card */}
-                    <CompactStepCard
-                      step={step}
-                      stepNumber={idx + 1}
-                      review={review}
-                      isCurrent={isCurrent}
-                      onClick={() => {
-                        if (isExpanded) {
-                          setExpandedStep(null);
-                        } else {
-                          setExpandedStep(step.id);
-                          setCurrentStepIndex(idx);
-                        }
-                      }}
-                    />
-
-                    {/* Expanded detail card */}
-                    {isExpanded && (
-                      <div className="mt-2 mb-4">
-                        <StepReviewCard
-                          step={step}
-                          stepNumber={idx + 1}
-                          totalSteps={plan.steps.length}
-                          existingReview={review}
-                          onDecision={(decision) => {
-                            addReview(step.id, decision);
-                            setExpandedStep(null);
-                            if (idx < plan.steps.length - 1) {
-                              nextStep();
-                              // Unfold la nouvelle étape courante
-                              setTimeout(() => {
-                                if (plan && reviewState.currentStepIndex < plan.steps.length) {
-                                  setExpandedStep(plan.steps[reviewState.currentStepIndex].id);
-                                }
-                              }, 0);
-                            }
-                          }}
-                          onAddComment={(content) => addComment(step.id, content)}
-                          onUpdateComment={(commentId, content) => updateComment(step.id, commentId, content)}
-                          onDeleteComment={(commentId) => deleteComment(step.id, commentId)}
-                          onNext={() => {
-                            setExpandedStep(null);
-                            if (isLastStep) {
-                              completeReview();
-                            } else {
-                              nextStep();
-                            }
-                          }}
-                          onPrevious={() => {
-                            setExpandedStep(null);
-                            previousStep();
-                          }}
-                          onSkip={() => {
-                            addReview(step.id, 'skipped');
-                            setExpandedStep(null);
-                            if (idx < plan.steps.length - 1) {
-                              nextStep();
-                              // Unfold la nouvelle étape courante
-                              setTimeout(() => {
-                                if (plan && reviewState.currentStepIndex < plan.steps.length) {
-                                  setExpandedStep(plan.steps[reviewState.currentStepIndex].id);
-                                }
-                              }, 0);
-                            }
-                          }}
-                          autoAdvance={false}
-                        />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            /* Detailed mode: one step at a time (original behavior) */
-            currentStep && (
-              <StepReviewCard
-                step={currentStep}
-                stepNumber={reviewState.currentStepIndex + 1}
-                totalSteps={plan.steps.length}
-                existingReview={getStepReview(currentStep.id)}
-                onDecision={handleDecision}
-                onAddComment={handleAddComment}
-                onUpdateComment={handleUpdateComment}
-                onDeleteComment={handleDeleteComment}
-                onNext={() => {
-                  if (isLastStep) {
-                    completeReview();
-                  } else {
-                    nextStep();
-                  }
-                }}
-                onPrevious={previousStep}
-                onSkip={handleSkip}
-              />
-            )
-          )}
+          {/* Main content - Step review card */}
+          <div className="max-w-4xl mx-auto">
+            <StepReviewCard
+              step={currentStep}
+              stepNumber={reviewState.currentStepIndex + 1}
+              totalSteps={plan.steps.length}
+              existingReview={getStepReview(currentStep.id)}
+              onDecision={handleDecision}
+              onAddComment={handleAddComment}
+              onUpdateComment={handleUpdateComment}
+              onDeleteComment={handleDeleteComment}
+              onNext={() => {
+                if (isLastStep) {
+                  completeReview();
+                } else {
+                  nextStep();
+                }
+              }}
+              onPrevious={previousStep}
+              onSkip={handleSkip}
+            />
+          </div>
         </div>
       </div>
+    </div>
 
-      {/* Floating Comments Button */}
+    {/* Floating Comments Button */}
       <button
         onClick={() => setShowPlanComments(!showPlanComments)}
         className="fixed bottom-6 right-6 p-4 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all hover:scale-110 z-40"

@@ -38,6 +38,18 @@ export interface MongoDBPlanDocument {
       criteria: string[];
       automatedTests?: string[];
     };
+    comments?: Array<{
+      id: string;
+      content: string;
+      author?: string;
+      createdAt: Date;
+      updatedAt?: Date;
+    }>;
+    reviewStatus?: {
+      decision: 'approved' | 'rejected' | 'skipped';
+      timestamp: Date;
+      reviewer?: string;
+    };
   }>;
   createdAt: Date;
   updatedAt: Date;
@@ -60,7 +72,19 @@ export class PlanMapper {
           stepDoc.dependsOn.map((id) => new StepId(id)),
           stepDoc.estimatedDuration as Duration | undefined,
           stepDoc.actions as Action[],
-          stepDoc.validation as ValidationCriteria | undefined
+          stepDoc.validation as ValidationCriteria | undefined,
+          (stepDoc.comments || []).map((c) => ({
+            id: c.id,
+            content: c.content,
+            author: c.author,
+            createdAt: c.createdAt,
+            updatedAt: c.updatedAt,
+          })),
+          stepDoc.reviewStatus ? {
+            decision: stepDoc.reviewStatus.decision,
+            timestamp: stepDoc.reviewStatus.timestamp,
+            reviewer: stepDoc.reviewStatus.reviewer,
+          } : undefined
         )
     );
 
@@ -129,6 +153,18 @@ export class PlanMapper {
         estimatedDuration: step.estimatedDuration,
         actions: step.actions,
         validation: step.validation,
+        comments: (step.comments || []).map((c) => ({
+          id: c.id,
+          content: c.content,
+          author: c.author,
+          createdAt: c.createdAt,
+          updatedAt: c.updatedAt,
+        })),
+        reviewStatus: step.reviewStatus ? {
+          decision: step.reviewStatus.decision,
+          timestamp: step.reviewStatus.timestamp,
+          reviewer: step.reviewStatus.reviewer,
+        } : undefined
       })),
       createdAt: plan.createdAt,
       updatedAt: plan.updatedAt,

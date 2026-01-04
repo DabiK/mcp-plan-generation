@@ -115,6 +115,27 @@ export interface PlanDTO {
   createdAt: string;
   updatedAt: string;
   revision: number;
+  comments?: {
+    id: string;
+    content: string;
+    author?: string;
+    createdAt: string;
+    updatedAt?: string;
+  }[];
+}
+
+export interface StepCommentDTO {
+  id: string;
+  content: string;
+  author?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface StepReviewStatusDTO {
+  decision: 'approved' | 'rejected' | 'skipped';
+  timestamp: string;
+  reviewer?: string;
 }
 
 export interface StepDTO {
@@ -133,6 +154,8 @@ export interface StepDTO {
     criteria: string[];
     automatedTests?: string[];
   };
+  comments?: StepCommentDTO[];
+  reviewStatus?: StepReviewStatusDTO;
 }
 
 export interface ValidationResultDTO {

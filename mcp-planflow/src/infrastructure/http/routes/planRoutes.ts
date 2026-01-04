@@ -7,7 +7,17 @@ import {
   GetPlanUseCase,
   UpdatePlanUseCase,
   ListPlansUseCase,
+  AddStepCommentUseCase,
+  UpdateStepCommentUseCase,
+  DeleteStepCommentUseCase,
 } from '../../../application/use-cases';
+import {
+  AddPlanCommentUseCase,
+  UpdatePlanCommentUseCase,
+  DeletePlanCommentUseCase,
+  GetPlanCommentsUseCase,
+} from '../../../application/use-cases/PlanCommentUseCases';
+import { SetStepReviewStatusUseCase } from '../../../application/use-cases/SetStepReviewStatusUseCase';
 import { PlanNotFoundError } from '../../../domain/errors/PlanNotFoundError';
 
 export const planRouter = Router();
@@ -156,6 +166,191 @@ planRouter.delete('/:id', async (req: Request, res: Response) => {
     }
   } catch (error) {
     console.error('Error in DELETE /plans/:id:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+// POST /api/plans/:planId/steps/:stepId/comments - Add a comment to a step
+planRouter.post('/:planId/steps/:stepId/comments', async (req: Request, res: Response) => {
+  try {
+    const useCase = container.resolve(AddStepCommentUseCase);
+    const result = await useCase.execute({
+      planId: req.params.planId,
+      stepId: req.params.stepId,
+      content: req.body.content,
+      author: req.body.author,
+    });
+
+    if (result.success) {
+      res.status(201).json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (error) {
+    console.error('Error adding step comment:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+// PUT /api/plans/:planId/steps/:stepId/comments/:commentId - Update a comment
+planRouter.put('/:planId/steps/:stepId/comments/:commentId', async (req: Request, res: Response) => {
+  try {
+    const useCase = container.resolve(UpdateStepCommentUseCase);
+    const result = await useCase.execute({
+      planId: req.params.planId,
+      stepId: req.params.stepId,
+      commentId: req.params.commentId,
+      content: req.body.content,
+    });
+
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (error) {
+    console.error('Error updating step comment:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+// DELETE /api/plans/:planId/steps/:stepId/comments/:commentId - Delete a comment
+planRouter.delete('/:planId/steps/:stepId/comments/:commentId', async (req: Request, res: Response) => {
+  try {
+    const useCase = container.resolve(DeleteStepCommentUseCase);
+    const result = await useCase.execute({
+      planId: req.params.planId,
+      stepId: req.params.stepId,
+      commentId: req.params.commentId,
+    });
+
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (error) {
+    console.error('Error deleting step comment:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+// GET /api/plans/:planId/comments - Get all plan comments
+planRouter.get('/:planId/comments', async (req: Request, res: Response) => {
+  try {
+    const useCase = container.resolve(GetPlanCommentsUseCase);
+    const comments = await useCase.execute(req.params.planId);
+    res.json({ success: true, comments });
+  } catch (error) {
+    console.error('Error getting plan comments:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+// POST /api/plans/:planId/comments - Add a plan comment
+planRouter.post('/:planId/comments', async (req: Request, res: Response) => {
+  try {
+    const useCase = container.resolve(AddPlanCommentUseCase);
+    const result = await useCase.execute({
+      planId: req.params.planId,
+      content: req.body.content,
+      author: req.body.author,
+    });
+
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (error) {
+    console.error('Error adding plan comment:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+// PUT /api/plans/:planId/comments/:commentId - Update a plan comment
+planRouter.put('/:planId/comments/:commentId', async (req: Request, res: Response) => {
+  try {
+    const useCase = container.resolve(UpdatePlanCommentUseCase);
+    const result = await useCase.execute({
+      planId: req.params.planId,
+      commentId: req.params.commentId,
+      content: req.body.content,
+    });
+
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (error) {
+    console.error('Error updating plan comment:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+// DELETE /api/plans/:planId/comments/:commentId - Delete a plan comment
+planRouter.delete('/:planId/comments/:commentId', async (req: Request, res: Response) => {
+  try {
+    const useCase = container.resolve(DeletePlanCommentUseCase);
+    const result = await useCase.execute({
+      planId: req.params.planId,
+      commentId: req.params.commentId,
+    });
+
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (error) {
+    console.error('Error deleting plan comment:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+// POST /api/plans/:planId/steps/:stepId/review - Set review status for a step
+planRouter.post('/:planId/steps/:stepId/review', async (req: Request, res: Response) => {
+  try {
+    const useCase = container.resolve(SetStepReviewStatusUseCase);
+    const result = await useCase.execute({
+      planId: req.params.planId,
+      stepId: req.params.stepId,
+      decision: req.body.decision,
+      reviewer: req.body.reviewer,
+    });
+
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (error) {
+    console.error('Error setting step review status:', error);
     res.status(500).json({
       error: 'Internal Server Error',
       message: error instanceof Error ? error.message : 'Unknown error',

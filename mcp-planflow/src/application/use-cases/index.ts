@@ -4,3 +4,6 @@ export * from './CreatePlanUseCase';
 export * from './GetPlanUseCase';
 export * from './UpdatePlanUseCase';
 export * from './ListPlansUseCase';
+export * from './StepCommentUseCases';
+export * from './StepNavigationUseCases';
+export * from './PlanCommentUseCases';

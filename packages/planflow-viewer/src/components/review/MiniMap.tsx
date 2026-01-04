@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { StepDTO } from '@/types';
+import type { StepDTO, ReviewDecision } from '@/types';
 import type { Phase } from '@/lib/phaseDetection';
 
 interface MiniMapProps {
@@ -8,9 +8,10 @@ interface MiniMapProps {
   currentStepIndex: number;
   onStepClick: (index: number) => void;
   reviewedSteps: Set<number>; // Indices des steps reviewés (approved/rejected/skipped)
+  getStepReviewDecision?: (stepId: string) => ReviewDecision | undefined; // Pour afficher le statut
 }
 
-export function MiniMap({ steps, phases, currentStepIndex, onStepClick, reviewedSteps }: MiniMapProps) {
+export function MiniMap({ steps, phases, currentStepIndex, onStepClick, reviewedSteps, getStepReviewDecision }: MiniMapProps) {
   const currentStepRef = useRef<HTMLButtonElement>(null);
 
   // Auto-scroll vers le step courant
@@ -67,6 +68,27 @@ export function MiniMap({ steps, phases, currentStepIndex, onStepClick, reviewed
                   const step = steps[stepIdx];
                   const isCurrent = stepIdx === currentStepIndex;
                   const isReviewed = reviewedSteps.has(stepIdx);
+                  const reviewDecision = getStepReviewDecision?.(step.id);
+
+                  const getStatusIcon = () => {
+                    if (!reviewDecision) return '○';
+                    switch (reviewDecision) {
+                      case 'approved': return '✓';
+                      case 'rejected': return '✗';
+                      case 'skipped': return '⏭';
+                      default: return '○';
+                    }
+                  };
+
+                  const getStatusColor = () => {
+                    if (!reviewDecision) return 'text-muted-foreground';
+                    switch (reviewDecision) {
+                      case 'approved': return 'text-green-500';
+                      case 'rejected': return 'text-red-500';
+                      case 'skipped': return 'text-yellow-500';
+                      default: return 'text-muted-foreground';
+                    }
+                  };
 
                   return (
                     <button
@@ -79,17 +101,16 @@ export function MiniMap({ steps, phases, currentStepIndex, onStepClick, reviewed
                         ${isCurrent 
                           ? 'bg-foreground text-background font-semibold shadow-sm' 
                           : isReviewed
-                            ? 'bg-muted/70 text-muted-foreground hover:bg-muted'
+                            ? 'bg-muted/70 hover:bg-muted'
                             : 'hover:bg-muted/50 text-foreground'
                         }
                       `}
                     >
                       <div className="flex items-center gap-1.5">
-                        {/* Status indicator */}
-                        <span className={`
-                          w-1.5 h-1.5 rounded-full flex-shrink-0
-                          ${isCurrent ? 'bg-background' : isReviewed ? 'bg-green-500' : 'bg-border'}
-                        `} />
+                        {/* Status icon */}
+                        <span className={`flex-shrink-0 font-semibold ${isCurrent ? 'text-background' : getStatusColor()}`}>
+                          {getStatusIcon()}
+                        </span>
                         
                         {/* Step number and title */}
                         <span className="truncate flex-1">

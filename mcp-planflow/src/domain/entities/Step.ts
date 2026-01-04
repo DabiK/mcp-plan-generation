@@ -104,6 +104,20 @@ export interface ValidationCriteria {
   automatedTests?: string[];
 }
 
+export interface StepReviewStatus {
+  decision: 'approved' | 'rejected' | 'skipped';
+  timestamp: Date;
+  reviewer?: string;
+}
+
+export interface StepComment {
+  id: string;
+  content: string;
+  author?: string;
+  createdAt: Date;
+  updatedAt?: Date;
+}
+
 export class Step {
   constructor(
     public readonly id: StepId,
@@ -114,7 +128,9 @@ export class Step {
     public dependsOn: StepId[],
     public estimatedDuration?: Duration,
     public actions: Action[] = [],
-    public validation?: ValidationCriteria
+    public validation?: ValidationCriteria,
+    public comments: StepComment[] = [],
+    public reviewStatus?: StepReviewStatus
   ) {}
 
   addDependency(stepId: StepId): void {

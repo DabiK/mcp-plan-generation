@@ -1,26 +1,39 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { PlanReviewState, StepReview, StepComment, ReviewDecision } from '@/types';
+import type { PlanReviewState, StepReview, StepComment, ReviewDecision, PlanDTO } from '@/types';
 import { planService } from '@/services/planService';
 
-const STORAGE_PREFIX = 'planflow_review_';
-
-export function useStepReviews(planId: string) {
-  const storageKey = `${STORAGE_PREFIX}${planId}`;
+export function useStepReviews(planId: string, plan?: PlanDTO) {
   
   const [reviewState, setReviewState] = useState<PlanReviewState>(() => {
-    const stored = localStorage.getItem(storageKey);
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch {
-        return {
-          planId,
-          reviews: {},
-          currentStepIndex: 0,
-          isComplete: false,
-        };
-      }
+    // Initialize from plan data (API) if available
+    if (plan && plan.steps) {
+      const reviewsFromDB: Record<string, StepReview> = {};
+      
+      plan.steps.forEach((step) => {
+        if (step.reviewStatus) {
+          reviewsFromDB[step.id] = {
+            stepId: step.id,
+            decision: step.reviewStatus.decision,
+            comments: step.comments?.map((c) => ({
+              id: c.id,
+              stepId: step.id,
+              content: c.content,
+              timestamp: c.createdAt,
+            })) || [],
+            timestamp: step.reviewStatus.timestamp,
+          };
+        }
+      });
+
+      return {
+        planId,
+        reviews: reviewsFromDB,
+        currentStepIndex: 0,
+        isComplete: false,
+      };
     }
+
+    // Default empty state if plan not loaded yet
     return {
       planId,
       reviews: {},
@@ -29,12 +42,37 @@ export function useStepReviews(planId: string) {
     };
   });
 
-  // Persist to localStorage whenever state changes
+  // Hydrate from plan data when it becomes available
   useEffect(() => {
-    localStorage.setItem(storageKey, JSON.stringify(reviewState));
-  }, [reviewState, storageKey]);
+    if (plan && plan.steps) {
+      const reviewsFromDB: Record<string, StepReview> = {};
+      
+      plan.steps.forEach((step) => {
+        if (step.reviewStatus) {
+          reviewsFromDB[step.id] = {
+            stepId: step.id,
+            decision: step.reviewStatus.decision,
+            comments: step.comments?.map((c) => ({
+              id: c.id,
+              stepId: step.id,
+              content: c.content,
+              timestamp: c.createdAt,
+            })) || [],
+            timestamp: step.reviewStatus.timestamp,
+          };
+        }
+      });
 
-  const addReview = useCallback((stepId: string, decision: ReviewDecision) => {
+      // Use API data as source of truth
+      setReviewState((prev) => ({
+        ...prev,
+        reviews: reviewsFromDB,
+      }));
+    }
+  }, [plan]);
+
+  const addReview = useCallback(async (stepId: string, decision: ReviewDecision) => {
+    // Update local state immediately (optimistic update)
     setReviewState((prev) => ({
       ...prev,
       reviews: {
@@ -47,7 +85,15 @@ export function useStepReviews(planId: string) {
         },
       },
     }));
-  }, []);
+
+    // Persist to backend
+    try {
+      await planService.setStepReviewStatus(planId, stepId, decision);
+    } catch (error) {
+      console.error('Failed to persist review status:', error);
+      // State already updated optimistically, localStorage will persist it
+    }
+  }, [planId]);
 
   const addComment = useCallback(async (stepId: string, content: string) => {
     try {
@@ -64,45 +110,25 @@ export function useStepReviews(planId: string) {
 
         setReviewState((prev) => {
           const existingReview = prev.reviews[stepId];
-          return {
-            ...prev,
-            reviews: {
-              ...prev.reviews,
-              [stepId]: {
-                stepId,
-                decision: existingReview?.decision || 'skipped',
-                comments: [...(existingReview?.comments || []), comment],
-                timestamp: existingReview?.timestamp || new Date().toISOString(),
+          // Only update comments if a review exists, don't create a new review
+          if (existingReview) {
+            return {
+              ...prev,
+              reviews: {
+                ...prev.reviews,
+                [stepId]: {
+                  ...existingReview,
+                  comments: [...existingReview.comments, comment],
+                },
               },
-            },
-          };
+            };
+          }
+          // If no review exists, don't create one - comments are independent
+          return prev;
         });
       }
     } catch (error) {
       console.error('Failed to add comment:', error);
-      // Fallback to localStorage on error
-      const comment: StepComment = {
-        id: `comment_${Date.now()}`,
-        stepId,
-        content,
-        timestamp: new Date().toISOString(),
-      };
-
-      setReviewState((prev) => {
-        const existingReview = prev.reviews[stepId];
-        return {
-          ...prev,
-          reviews: {
-            ...prev.reviews,
-            [stepId]: {
-              stepId,
-              decision: existingReview?.decision || 'skipped',
-              comments: [...(existingReview?.comments || []), comment],
-              timestamp: existingReview?.timestamp || new Date().toISOString(),
-            },
-          },
-        };
-      });
     }
   }, [planId]);
 

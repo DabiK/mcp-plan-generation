@@ -116,6 +116,11 @@ export class CreatePlanUseCase {
         estimatedDuration: step.estimatedDuration,
         actions: step.actions,
         validation: step.validation,
+        reviewStatus: step.reviewStatus ? {
+          decision: step.reviewStatus.decision,
+          timestamp: step.reviewStatus.timestamp.toISOString(),
+          reviewer: step.reviewStatus.reviewer,
+        } : undefined,
       })),
       createdAt: plan.createdAt.toISOString(),
       updatedAt: plan.updatedAt.toISOString(),

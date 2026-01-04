@@ -17,12 +17,6 @@ export default function PlanList() {
             Gérez vos plans d'implémentation
           </p>
         </div>
-        <Link
-          to="/plans/new"
-          className="px-4 py-2 bg-foreground text-background font-medium hover:opacity-90 transition-opacity"
-        >
-          Nouveau plan
-        </Link>
       </div>
 
       {/* Filters */}
@@ -113,9 +107,6 @@ export default function PlanList() {
         <div className="text-center py-12 border border-border">
           <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
           <p className="text-muted-foreground mb-2">Aucun plan trouvé</p>
-          <Link to="/plans/new" className="text-foreground underline">
-            Créer un nouveau plan
-          </Link>
         </div>
       )}
     </div>

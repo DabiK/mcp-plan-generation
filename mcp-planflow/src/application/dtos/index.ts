@@ -14,3 +14,24 @@ export {
   DocumentationAction,
   CustomAction
 } from './PlanDTO';
+
+export {
+  StepStatusDTO,
+  StepStatusState,
+  StepWithStatusDTO,
+  StepContextDTO,
+  CanStartResultDTO,
+  DependencyInfoDTO,
+  ProgressDTO,
+  PhaseProgressDTO,
+  ImplementationStateDTO,
+  ImplementationInfoDTO
+} from './ImplementationDTO';
+
+export {
+  StepCommentDTO,
+  AddStepCommentInputDTO,
+  DeleteStepCommentInputDTO,
+  UpdateStepCommentInputDTO,
+  StepCommentOperationResultDTO
+} from './StepCommentDTO';

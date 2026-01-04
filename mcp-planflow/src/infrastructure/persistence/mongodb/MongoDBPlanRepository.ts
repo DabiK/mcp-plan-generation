@@ -6,6 +6,9 @@ import { PlanId } from '../../../domain/value-objects/PlanId';
 import { MongoDBConnection } from './MongoDBConnection';
 import { PlanMapper, MongoDBPlanDocument } from './mappers/PlanMapper';
 import { PlanNotFoundError } from '../../../domain/errors/PlanNotFoundError';
+import { StepCommentDTO } from '../../../application/dtos/StepCommentDTO';
+import { PlanCommentDTO } from '../../../application/dtos/PlanCommentDTO';
+import { StepReviewStatus } from '../../../domain/entities/Step';
 
 @injectable()
 export class MongoDBPlanRepository implements IPlanRepository {
@@ -105,5 +108,216 @@ export class MongoDBPlanRepository implements IPlanRepository {
     const collection = this.getCollection();
     const count = await collection.countDocuments({ planId: id.getValue() });
     return count > 0;
+  }
+
+  async addStepComment(planId: string, stepId: string, comment: StepCommentDTO): Promise<boolean> {
+    try {
+      const collection = this.getCollection();
+      
+      const result = await collection.updateOne(
+        { 
+          planId,
+          'steps.id': stepId 
+        },
+        {
+          $push: {
+            'steps.$.comments': {
+              id: comment.id,
+              content: comment.content,
+              author: comment.author,
+              createdAt: new Date(comment.createdAt),
+              updatedAt: comment.updatedAt ? new Date(comment.updatedAt) : undefined,
+            }
+          }
+        }
+      );
+
+      return result.modifiedCount > 0;
+    } catch (error) {
+      console.error('Error adding step comment:', error);
+      return false;
+    }
+  }
+
+  async deleteStepComment(planId: string, stepId: string, commentId: string): Promise<boolean> {
+    try {
+      const collection = this.getCollection();
+      
+      const result = await collection.updateOne(
+        { 
+          planId,
+          'steps.id': stepId 
+        },
+        {
+          $pull: {
+            'steps.$.comments': { id: commentId }
+          }
+        }
+      );
+
+      return result.modifiedCount > 0;
+    } catch (error) {
+      console.error('Error deleting step comment:', error);
+      return false;
+    }
+  }
+
+  async updateStepComment(planId: string, stepId: string, commentId: string, content: string): Promise<boolean> {
+    try {
+      const collection = this.getCollection();
+      
+      const result = await collection.updateOne(
+        { 
+          planId,
+          'steps.id': stepId,
+          'steps.comments.id': commentId
+        },
+        {
+          $set: {
+            'steps.$[step].comments.$[comment].content': content,
+            'steps.$[step].comments.$[comment].updatedAt': new Date(),
+          }
+        },
+        {
+          arrayFilters: [
+            { 'step.id': stepId },
+            { 'comment.id': commentId }
+          ]
+        }
+      );
+
+      return result.modifiedCount > 0;
+    } catch (error) {
+      console.error('Error updating step comment:', error);
+      return false;
+    }
+  }
+
+  async addPlanComment(planId: string, comment: PlanCommentDTO): Promise<boolean> {
+    try {
+      const collection = this.getCollection();
+      
+      const result = await collection.updateOne(
+        { planId },
+        {
+          $push: {
+            comments: {
+              id: comment.id,
+              content: comment.content,
+              author: comment.author,
+              createdAt: new Date(comment.createdAt),
+              updatedAt: comment.updatedAt ? new Date(comment.updatedAt) : undefined,
+            }
+          }
+        }
+      );
+
+      return result.modifiedCount > 0;
+    } catch (error) {
+      console.error('Error adding plan comment:', error);
+      return false;
+    }
+  }
+
+  async deletePlanComment(planId: string, commentId: string): Promise<boolean> {
+    try {
+      const collection = this.getCollection();
+      
+      const result = await collection.updateOne(
+        { planId },
+        {
+          $pull: {
+            comments: { id: commentId }
+          }
+        }
+      );
+
+      return result.modifiedCount > 0;
+    } catch (error) {
+      console.error('Error deleting plan comment:', error);
+      return false;
+    }
+  }
+
+  async updatePlanComment(planId: string, commentId: string, content: string): Promise<boolean> {
+    try {
+      const collection = this.getCollection();
+      
+      const result = await collection.updateOne(
+        { 
+          planId,
+          'comments.id': commentId
+        },
+        {
+          $set: {
+            'comments.$.content': content,
+            'comments.$.updatedAt': new Date(),
+          }
+        }
+      );
+
+      return result.modifiedCount > 0;
+    } catch (error) {
+      console.error('Error updating plan comment:', error);
+      return false;
+    }
+  }
+
+  async getPlanComments(planId: string): Promise<PlanCommentDTO[]> {
+    try {
+      const collection = this.getCollection();
+      
+      const plan = await collection.findOne(
+        { planId },
+        { projection: { comments: 1 } }
+      );
+
+      const commentsArr = (plan as any)?.comments;
+      if (!plan || !commentsArr) {
+        return [];
+      }
+
+      return commentsArr.map((comment: any) => ({
+        id: comment.id,
+        content: comment.content,
+        author: comment.author,
+        createdAt: comment.createdAt instanceof Date 
+          ? comment.createdAt.toISOString() 
+          : comment.createdAt,
+        updatedAt: comment.updatedAt 
+          ? (comment.updatedAt instanceof Date 
+            ? comment.updatedAt.toISOString() 
+            : comment.updatedAt)
+          : undefined,
+      }));
+    } catch (error) {
+      console.error('Error getting plan comments:', error);
+      return [];
+    }
+  }
+
+  async setStepReviewStatus(planId: string, stepId: string, reviewStatus: StepReviewStatus): Promise<boolean> {
+    try {
+      const collection = this.getCollection();
+      
+      const result = await collection.updateOne(
+        { planId, 'steps.id': stepId },
+        { 
+          $set: { 
+            'steps.$.reviewStatus': {
+              decision: reviewStatus.decision,
+              timestamp: reviewStatus.timestamp,
+              reviewer: reviewStatus.reviewer,
+            },
+            updatedAt: new Date()
+          } 
+        }
+      );
+
+      return result.modifiedCount > 0;
+    } catch (error) {
+      console.error('Error setting step review status:', error);
+      return false;
+    }
   }
 }

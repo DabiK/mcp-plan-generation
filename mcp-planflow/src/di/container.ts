@@ -11,6 +11,9 @@ import { CreatePlanUseCase } from '../application/use-cases/CreatePlanUseCase';
 import { GetPlanUseCase } from '../application/use-cases/GetPlanUseCase';
 import { UpdatePlanUseCase } from '../application/use-cases/UpdatePlanUseCase';
 import { ListPlansUseCase } from '../application/use-cases/ListPlansUseCase';
+import { AddStepCommentUseCase, DeleteStepCommentUseCase, UpdateStepCommentUseCase } from '../application/use-cases/StepCommentUseCases';
+import { GetPlanCommentsUseCase, AddPlanCommentUseCase, UpdatePlanCommentUseCase, DeletePlanCommentUseCase } from '../application/use-cases/PlanCommentUseCases';
+import { StepNavigationUseCases } from '../application/use-cases/StepNavigationUseCases';
 import { McpServer } from '../infrastructure/mcp/McpServer';
 import { HttpServer } from '../infrastructure/http/HttpServer';
 
@@ -32,6 +35,14 @@ export function setupContainer(): void {
   container.registerSingleton(GetPlanUseCase);
   container.registerSingleton(UpdatePlanUseCase);
   container.registerSingleton(ListPlansUseCase);
+  container.registerSingleton(AddStepCommentUseCase);
+  container.registerSingleton(DeleteStepCommentUseCase);
+  container.registerSingleton(UpdateStepCommentUseCase);
+  container.registerSingleton(StepNavigationUseCases);
+  container.registerSingleton(GetPlanCommentsUseCase);
+  container.registerSingleton(AddPlanCommentUseCase);
+  container.registerSingleton(UpdatePlanCommentUseCase);
+  container.registerSingleton(DeletePlanCommentUseCase);
 
   // Register MCP server
   container.registerSingleton(McpServer);

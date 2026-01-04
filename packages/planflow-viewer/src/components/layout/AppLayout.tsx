@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 
 export default function AppLayout() {
   const location = useLocation();
+  const isReviewRoute = /\/review(\/|$)/.test(location.pathname);
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
@@ -49,7 +50,13 @@ export default function AppLayout() {
         </div>
       </header>
 
-      <main className="container mx-auto px-6 py-8">
+      <main
+        className={cn(
+          isReviewRoute
+            ? 'container-fluid lg:container lg:mx-auto lg:px-6 py-8'
+            : 'container mx-auto px-6 py-8'
+        )}
+      >
         <Outlet />
       </main>
     </div>

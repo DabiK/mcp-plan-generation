@@ -46,21 +46,6 @@ export default function Home() {
         <h2 className="text-2xl font-bold">Actions rapides</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Link
-            to="/plans/new"
-            className="border border-border p-6 bg-background hover:border-foreground transition-colors group"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-semibold mb-1">Créer un plan</div>
-                <div className="text-sm text-muted-foreground">
-                  Nouveau plan d'implémentation
-                </div>
-              </div>
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </div>
-          </Link>
-
-          <Link
             to="/plans"
             className="border border-border p-6 bg-background hover:border-foreground transition-colors group"
           >

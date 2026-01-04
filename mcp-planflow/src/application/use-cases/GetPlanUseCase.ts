@@ -15,11 +15,10 @@ export class GetPlanUseCase {
     if (!plan) {
       throw new PlanNotFoundError(planId);
     }
-
-    return this.toDTO(plan);
+    const planComments = await this.repository.getPlanComments(plan.id.getValue());
+    return this.toDTO(plan, planComments);
   }
-
-  private toDTO(plan: Plan): PlanDTO {
+  private toDTO(plan: Plan, planComments: Array<{ id: string; content: string; author?: string; createdAt: string; updatedAt?: string }>): PlanDTO {
     return {
       planId: plan.id.getValue(),
       schemaVersion: plan.schemaVersion,
@@ -50,10 +49,23 @@ export class GetPlanUseCase {
         estimatedDuration: step.estimatedDuration,
         actions: step.actions,
         validation: step.validation,
+        comments: (step.comments || []).map((c) => ({
+          id: c.id,
+          content: c.content,
+          author: c.author,
+          createdAt: c.createdAt.toISOString(),
+          updatedAt: c.updatedAt ? c.updatedAt.toISOString() : undefined,
+        })),
+        reviewStatus: step.reviewStatus ? {
+          decision: step.reviewStatus.decision,
+          timestamp: step.reviewStatus.timestamp.toISOString(),
+          reviewer: step.reviewStatus.reviewer,
+        } : undefined,
       })),
       createdAt: plan.createdAt.toISOString(),
       updatedAt: plan.updatedAt.toISOString(),
       revision: plan.revision,
+      comments: planComments,
     };
   }
 }
