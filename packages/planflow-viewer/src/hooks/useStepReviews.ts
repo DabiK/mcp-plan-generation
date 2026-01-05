@@ -10,18 +10,27 @@ export function useStepReviews(planId: string, plan?: PlanDTO) {
       const reviewsFromDB: Record<string, StepReview> = {};
       
       plan.steps.forEach((step) => {
-        if (step.reviewStatus) {
-          reviewsFromDB[step.id] = {
+        // Load comments and review status from API
+        const hasComments = step.comments && step.comments.length > 0;
+        const hasReviewStatus = step.reviewStatus && step.reviewStatus.decision;
+        
+        if (hasReviewStatus || hasComments) {
+          const review: any = {
             stepId: step.id,
-            decision: step.reviewStatus.decision,
             comments: step.comments?.map((c) => ({
               id: c.id,
               stepId: step.id,
               content: c.content,
               timestamp: c.createdAt,
             })) || [],
-            timestamp: step.reviewStatus.timestamp,
+            timestamp: step.reviewStatus?.timestamp || new Date().toISOString(),
           };
+
+          if (step.reviewStatus?.decision) {
+            review.decision = step.reviewStatus.decision;
+          }
+
+          reviewsFromDB[step.id] = review;
         }
       });
 
@@ -48,17 +57,21 @@ export function useStepReviews(planId: string, plan?: PlanDTO) {
       const reviewsFromDB: Record<string, StepReview> = {};
       
       plan.steps.forEach((step) => {
-        if (step.reviewStatus) {
+        // Load comments and review status from API
+        const hasComments = step.comments && step.comments.length > 0;
+        const hasReviewStatus = step.reviewStatus;
+        
+        if (hasReviewStatus || hasComments) {
           reviewsFromDB[step.id] = {
             stepId: step.id,
-            decision: step.reviewStatus.decision,
+            decision: step.reviewStatus?.decision as any,
             comments: step.comments?.map((c) => ({
               id: c.id,
               stepId: step.id,
               content: c.content,
               timestamp: c.createdAt,
             })) || [],
-            timestamp: step.reviewStatus.timestamp,
+            timestamp: step.reviewStatus?.timestamp || new Date().toISOString(),
           };
         }
       });

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { PlanDTO } from '@/types';
 
 interface ReviewStats {
@@ -19,6 +20,27 @@ interface ReviewSummaryHeaderProps {
 }
 
 export function ReviewSummaryHeader({ plan, stats, currentStepIndex, currentPhase }: ReviewSummaryHeaderProps) {
+  const [copiedId, setCopiedId] = useState(false);
+  const [copiedPrompt, setCopiedPrompt] = useState(false);
+
+  const copyToClipboard = async (text: string, setCopied: (val: boolean) => void) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  const handleCopyId = () => {
+    copyToClipboard(plan.planId, setCopiedId);
+  };
+
+  const handleCopyPrompt = () => {
+    const prompt = `Récupère le plan avec l'ID "${plan.planId}" et applique les modifications liées aux commentaires que tu trouveras dans le plan.`;
+    copyToClipboard(prompt, setCopiedPrompt);
+  };
   const totalSteps = plan.steps.length;
   const progress = ((currentStepIndex + 1) / totalSteps) * 100;
   
@@ -57,6 +79,53 @@ export function ReviewSummaryHeader({ plan, stats, currentStepIndex, currentPhas
             <p className="text-sm text-muted-foreground mt-1">
               {plan.plan.objective}
             </p>
+          </div>
+          
+          {/* Action buttons */}
+          <div className="flex items-center gap-2 ml-4">
+            <button
+              onClick={handleCopyId}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-secondary hover:bg-border border border-border rounded-lg transition-colors"
+              title="Copier l'ID du plan"
+            >
+              {copiedId ? (
+                <>
+                  <svg className="w-3.5 h-3.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-green-500">Copié !</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  <span>ID Plan</span>
+                </>
+              )}
+            </button>
+            
+            <button
+              onClick={handleCopyPrompt}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-600 dark:text-blue-400 rounded-lg transition-colors"
+              title="Copier le prompt pour appliquer les commentaires"
+            >
+              {copiedPrompt ? (
+                <>
+                  <svg className="w-3.5 h-3.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-green-500">Copié !</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                  </svg>
+                  <span>Copier Prompt</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
 

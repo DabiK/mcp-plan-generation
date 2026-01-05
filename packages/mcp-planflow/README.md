@@ -213,6 +213,46 @@ List plans with optional filters.
 
 Returns array of plans matching filters.
 
+#### 7. `plan-context-set`
+Attach file context to a plan for better AI understanding.
+
+```json
+{
+  "planId": "abc123xyz",
+  "contextFiles": [
+    {
+      "filePath": "/src/components/Button.tsx",
+      "description": "Main button component to be refactored"
+    }
+  ]
+}
+```
+
+Returns the updated plan context.
+
+#### 8. `plan-context-get`
+Retrieve file context attached to a plan.
+
+```json
+{
+  "planId": "abc123xyz"
+}
+```
+
+Returns array of context files with paths and descriptions.
+
+#### 9. `plan-context-delete`
+Remove file context from a plan.
+
+```json
+{
+  "planId": "abc123xyz",
+  "filePaths": ["/src/components/Button.tsx"]
+}
+```
+
+Returns confirmation of context removal.
+
 ## Plan Schema
 
 ### Plan Types

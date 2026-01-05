@@ -1,12 +1,14 @@
 import { injectable } from 'tsyringe';
-import Ajv, { ValidateFunction } from 'ajv';
+import Ajv, { ValidateFunction, ErrorObject } from 'ajv';
 import addFormats from 'ajv-formats';
 import planflowSchema from './schemas/planflow-v1.1.0.json';
+import { DetailedValidationError } from '../../domain/errors/ValidationError';
 
 export interface ValidationResult {
   isValid: boolean;
   errors: string[];
   warnings: string[];
+  detailedErrors: DetailedValidationError[];
 }
 
 @injectable()
@@ -31,6 +33,7 @@ export class PlanValidator {
   validate(plan: unknown): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
+    const detailedErrors: DetailedValidationError[] = [];
 
     // Validation JSON Schema
     const isValid = this.validateFunction(plan);
@@ -40,6 +43,9 @@ export class PlanValidator {
         const path = error.instancePath || 'root';
         const message = error.message || 'Unknown error';
         errors.push(`${path}: ${message}`);
+        
+        // Convertir en DetailedValidationError
+        detailedErrors.push(this.convertAjvError(error));
       }
     }
 
@@ -49,7 +55,14 @@ export class PlanValidator {
       const stepIds = new Set<string>();
       for (const step of plan.steps) {
         if (stepIds.has(step.id)) {
-          errors.push(`Duplicate step ID: ${step.id}`);
+          const errorMsg = `Duplicate step ID: ${step.id}`;
+          errors.push(errorMsg);
+          detailedErrors.push({
+            path: `/steps/${step.id}`,
+            message: errorMsg,
+            errorType: 'business',
+            actualValue: step.id,
+          });
         }
         stepIds.add(step.id);
       }
@@ -59,9 +72,14 @@ export class PlanValidator {
         if (step.dependsOn) {
           for (const depId of step.dependsOn) {
             if (!stepIds.has(depId)) {
-              errors.push(
-                `Step "${step.id}" depends on non-existent step "${depId}"`
-              );
+              const errorMsg = `Step "${step.id}" depends on non-existent step "${depId}"`;
+              errors.push(errorMsg);
+              detailedErrors.push({
+                path: `/steps/${step.id}/dependsOn`,
+                message: errorMsg,
+                errorType: 'business',
+                actualValue: depId,
+              });
             }
           }
         }
@@ -69,7 +87,13 @@ export class PlanValidator {
 
       // Vérifier les cycles de dépendances
       if (this.hasCyclicDependencies(plan.steps)) {
-        errors.push('Cyclic dependencies detected in plan steps');
+        const errorMsg = 'Cyclic dependencies detected in plan steps';
+        errors.push(errorMsg);
+        detailedErrors.push({
+          path: '/steps',
+          message: errorMsg,
+          errorType: 'business',
+        });
       }
 
       // Warnings
@@ -89,6 +113,21 @@ export class PlanValidator {
       isValid: errors.length === 0,
       errors,
       warnings,
+      detailedErrors,
+    };
+  }
+
+  /**
+   * Convertit une erreur Ajv en DetailedValidationError
+   */
+  private convertAjvError(error: ErrorObject): DetailedValidationError {
+    return {
+      path: error.instancePath || 'root',
+      message: error.message || 'Unknown validation error',
+      errorType: 'schema',
+      expectedValue: error.params,
+      actualValue: error.data,
+      schemaKeyword: error.keyword,
     };
   }
 

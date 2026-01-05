@@ -4,13 +4,14 @@ import { Loader2, ArrowLeft, Trash2 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import FlowGraph from '@/components/flow/FlowGraph';
 import { planToFlowGraph } from '@/utils/flowHelpers';
+import { ContextTab } from '@/components/plan-detail/ContextTab';
 
 export default function PlanDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: plan, isLoading, error } = usePlanDetail(id);
   const deleteMutation = useDeletePlan();
-  const [activeTab, setActiveTab] = useState<'overview' | 'review' | 'graph' | 'steps' | 'json'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'review' | 'graph' | 'steps' | 'json' | 'context'>('overview');
   
   const flowGraph = useMemo(() => {
     if (!plan) return { nodes: [], edges: [] };
@@ -138,6 +139,16 @@ export default function PlanDetail() {
           >
             JSON
           </button>
+          <button
+            onClick={() => setActiveTab('context')}
+            className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'context'
+                ? 'border-foreground text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Context
+          </button>
         </div>
       </div>
 
@@ -228,6 +239,10 @@ export default function PlanDetail() {
               {JSON.stringify(plan, null, 2)}
             </pre>
           </div>
+        )}
+
+        {activeTab === 'context' && (
+          <ContextTab planId={plan.planId} />
         )}
       </div>
     </div>

@@ -6,8 +6,10 @@ import { usePlanComments } from '@/hooks/usePlanComments';
 import { StepReviewCard } from '@/components/review/StepReviewCard';
 import { ReviewSummaryHeader } from '@/components/review/ReviewSummaryHeader';
 import { MiniMap } from '@/components/review/MiniMap';
+import { ContextSidebar } from '@/components/review/ContextSidebar';
 import { PlanComments } from '@/components/PlanComments';
 import { detectPhases, getCurrentPhase, getPhaseStats } from '@/lib/phaseDetection';
+import { FileText } from 'lucide-react';
 import type { ReviewDecision } from '@/types';
 
 export function PlanReview() {
@@ -15,6 +17,7 @@ export function PlanReview() {
   const navigate = useNavigate();
   const { data: plan, isLoading } = usePlanDetail(id || '');
   const [showPlanComments, setShowPlanComments] = useState(false); // Panneau de commentaires
+  const [showContext, setShowContext] = useState(false); // Sidebar de contexte
   
   const {
     reviewState,
@@ -348,12 +351,27 @@ export function PlanReview() {
               Retour au plan
             </button>
 
-            <button
-              onClick={resetReview}
-              className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Réinitialiser
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowContext(!showContext)}
+                className={`text-sm flex items-center gap-1 px-3 py-1 rounded-lg transition-colors ${
+                  showContext
+                    ? 'bg-blue-500/10 text-blue-600 border border-blue-500/20'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+                }`}
+                title={showContext ? 'Masquer le contexte' : 'Afficher le contexte'}
+              >
+                <FileText className="w-4 h-4" />
+                Contexte
+              </button>
+
+              <button
+                onClick={resetReview}
+                className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Réinitialiser
+              </button>
+            </div>
           </div>
 
           {/* Main content - Step review card */}
@@ -382,10 +400,10 @@ export function PlanReview() {
       </div>
     </div>
 
-    {/* Floating Comments Button */}
+      {/* Floating Comments Button */}
       <button
         onClick={() => setShowPlanComments(!showPlanComments)}
-        className="fixed bottom-6 right-6 p-4 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all hover:scale-110 z-40"
+        className="fixed bottom-6 right-6 p-4 bg-blue-600 text-white rounded-full shadow-lg hover:shadow-xl hover:bg-blue-700 transition-all hover:scale-110 z-45"
         title="Commentaires du plan"
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -436,10 +454,17 @@ export function PlanReview() {
       {/* Backdrop */}
       {showPlanComments && (
         <div 
-          className="fixed inset-0 bg-black/30 z-40 md:hidden"
+          className="fixed inset-0 bg-black/30 z-44"
           onClick={() => setShowPlanComments(false)}
         />
       )}
+
+      {/* Context Sidebar */}
+      <ContextSidebar
+        planId={id || ''}
+        isOpen={showContext}
+        onToggle={() => setShowContext(!showContext)}
+      />
     </div>
   );
 }

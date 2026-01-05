@@ -18,7 +18,11 @@ export class CreatePlanUseCase {
     // Valider le plan
     const validationResult = this.validator.validate(planData);
     if (!validationResult.isValid) {
-      throw new ValidationError('Plan validation failed', validationResult.errors);
+      throw new ValidationError(
+        'Plan validation failed',
+        validationResult.errors,
+        validationResult.detailedErrors
+      );
     }
 
     // Générer un ID unique

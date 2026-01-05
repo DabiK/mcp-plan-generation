@@ -158,10 +158,20 @@ export interface StepDTO {
   reviewStatus?: StepReviewStatusDTO;
 }
 
+export interface DetailedValidationErrorDTO {
+  path: string;
+  message: string;
+  errorType: 'schema' | 'business' | 'format';
+  expectedValue?: any;
+  actualValue?: any;
+  schemaKeyword?: string;
+}
+
 export interface ValidationResultDTO {
   isValid: boolean;
   errors: string[];
   warnings: string[];
+  detailedErrors: DetailedValidationErrorDTO[];
 }
 
 export interface CreatePlanInputDTO {

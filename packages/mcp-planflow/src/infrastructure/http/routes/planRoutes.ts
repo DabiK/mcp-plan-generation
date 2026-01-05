@@ -18,6 +18,7 @@ import {
   GetPlanCommentsUseCase,
 } from '../../../application/use-cases/PlanCommentUseCases';
 import { SetStepReviewStatusUseCase } from '../../../application/use-cases/SetStepReviewStatusUseCase';
+import { GetPlanContextUseCase } from '../../../application/use-cases/GetPlanContextUseCase';
 import { PlanNotFoundError } from '../../../domain/errors/PlanNotFoundError';
 
 export const planRouter = Router();
@@ -351,6 +352,29 @@ planRouter.post('/:planId/steps/:stepId/review', async (req: Request, res: Respo
     }
   } catch (error) {
     console.error('Error setting step review status:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+// GET /api/plans/:planId/context - Get plan context
+planRouter.get('/:planId/context', async (req: Request, res: Response) => {
+  try {
+    const useCase = container.resolve(GetPlanContextUseCase);
+    const result = await useCase.execute(req.params.planId);
+
+    if (result) {
+      res.json(result);
+    } else {
+      res.status(404).json({
+        error: 'Not Found',
+        message: 'No context found for this plan',
+      });
+    }
+  } catch (error) {
+    console.error('Error getting plan context:', error);
     res.status(500).json({
       error: 'Internal Server Error',
       message: error instanceof Error ? error.message : 'Unknown error',

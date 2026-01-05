@@ -1,4 +1,5 @@
 // Types from backend (duplicated for frontend independence)
+
 export interface StepCommentDTO {
   id: string;
   stepId: string;

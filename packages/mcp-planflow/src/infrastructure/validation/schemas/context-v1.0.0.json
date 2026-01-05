@@ -1,0 +1,94 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://planflow.dev/schemas/context-v1.0.0.json",
+  "title": "PlanFlow Context Schema v1.0.0",
+  "description": "JSON Schema for plan context containing file references",
+  "type": "object",
+  "properties": {
+    "files": {
+      "type": "array",
+      "description": "List of files relevant to the plan implementation",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Relative or absolute file path",
+            "minLength": 1
+          },
+          "purpose": {
+            "type": "string",
+            "description": "Explanation of why this file is relevant to the plan",
+            "minLength": 1
+          },
+          "references": {
+            "type": "array",
+            "description": "Optional specific line ranges or symbols to reference",
+            "items": {
+              "type": "object",
+              "properties": {
+                "lineStart": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Starting line number (1-indexed)"
+                },
+                "lineEnd": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Ending line number (1-indexed)"
+                },
+                "symbol": {
+                  "type": "string",
+                  "description": "Specific symbol, function, or class name"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "tags": {
+            "type": "array",
+            "description": "Optional tags to categorize files",
+            "items": {
+              "type": "string",
+              "enum": [
+                "critical",
+                "documentation",
+                "test",
+                "config",
+                "example",
+                "dependency",
+                "template",
+                "generated"
+              ]
+            }
+          }
+        },
+        "required": ["path", "purpose"],
+        "additionalProperties": false
+      },
+      "minItems": 0
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Optional metadata about the context",
+      "properties": {
+        "version": {
+          "type": "string",
+          "description": "Context version or timestamp",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$|^\\d{4}-\\d{2}-\\d{2}T.*$"
+        },
+        "author": {
+          "type": "string",
+          "description": "Author who created/updated the context"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional notes about the context"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": ["files"],
+  "additionalProperties": false
+}

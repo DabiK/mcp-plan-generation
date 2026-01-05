@@ -22,7 +22,11 @@ import {
   UpdatePlanCommentUseCase,
   DeletePlanCommentUseCase,
   GetPlanCommentsUseCase,
+  SetPlanContextUseCase,
+  GetPlanContextUseCase,
+  DeletePlanContextUseCase,
 } from '../../application/use-cases';
+import { PatchPlanElementsUseCase } from '../../application/use-cases/PatchPlanElementsUseCase';
 
 @injectable()
 export class McpServer {
@@ -42,7 +46,11 @@ export class McpServer {
     @inject(AddPlanCommentUseCase) private addPlanCommentUseCase: AddPlanCommentUseCase,
     @inject(UpdatePlanCommentUseCase) private updatePlanCommentUseCase: UpdatePlanCommentUseCase,
     @inject(DeletePlanCommentUseCase) private deletePlanCommentUseCase: DeletePlanCommentUseCase,
-    @inject(GetPlanCommentsUseCase) private getPlanCommentsUseCase: GetPlanCommentsUseCase
+    @inject(GetPlanCommentsUseCase) private getPlanCommentsUseCase: GetPlanCommentsUseCase,
+    @inject(PatchPlanElementsUseCase) private patchPlanElementsUseCase: PatchPlanElementsUseCase,
+    @inject(SetPlanContextUseCase) private setPlanContextUseCase: SetPlanContextUseCase,
+    @inject(GetPlanContextUseCase) private getPlanContextUseCase: GetPlanContextUseCase,
+    @inject(DeletePlanContextUseCase) private deletePlanContextUseCase: DeletePlanContextUseCase
   ) {
     this.server = new Server(
       {
@@ -84,6 +92,15 @@ export class McpServer {
               },
             },
             required: ['plan'],
+          },
+        },
+        {
+          name: 'plan-context-format',
+          description: 'Get the context schema specification (v1.0.0) for plan file context',
+          inputSchema: {
+            type: 'object',
+            properties: {},
+            required: [],
           },
         },
         {
@@ -130,6 +147,93 @@ export class McpServer {
               },
             },
             required: ['planId', 'updates'],
+          },
+        },
+        {
+          name: 'plans-patch',
+          description: 'Atomically update any part of a plan: metadata, plan details, or a specific step. If stepId is provided, updates that step; otherwise updates plan-level fields.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              planId: {
+                type: 'string',
+                description: 'The unique identifier of the plan',
+              },
+              stepId: {
+                type: 'string',
+                description: 'The step ID to update (optional). If provided, other step-related fields will be applied to this step.',
+              },
+              // Plan-level fields (used when stepId is NOT provided)
+              metadata: {
+                type: 'object',
+                description: 'Partial metadata updates (only when stepId is not provided)',
+                properties: {
+                  title: { type: 'string', description: 'Plan title' },
+                  description: { type: 'string', description: 'Plan description' },
+                  author: { type: 'string', description: 'Plan author' },
+                  tags: { type: 'array', items: { type: 'string' }, description: 'Plan tags' },
+                },
+              },
+              plan: {
+                type: 'object',
+                description: 'Partial plan details updates (only when stepId is not provided)',
+                properties: {
+                  objective: { type: 'string', description: 'Plan objective' },
+                  scope: { type: 'string', description: 'Plan scope' },
+                  constraints: { type: 'array', items: { type: 'string' }, description: 'Constraints' },
+                  assumptions: { type: 'array', items: { type: 'string' }, description: 'Assumptions' },
+                  successCriteria: { type: 'array', items: { type: 'string' }, description: 'Success criteria' },
+                },
+              },
+              // Step-level fields (used when stepId IS provided)
+              title: { type: 'string', description: 'Step title (only when stepId is provided)' },
+              description: { type: 'string', description: 'Step description (only when stepId is provided)' },
+              kind: { type: 'string', description: 'Step kind: task, decision, or milestone (only when stepId is provided)' },
+              status: { type: 'string', description: 'Step status: not-started, in-progress, completed, or blocked (only when stepId is provided)' },
+              dependsOn: { type: 'array', items: { type: 'string' }, description: 'Step dependencies as array of step IDs (only when stepId is provided)' },
+              estimatedDuration: { 
+                type: 'object', 
+                description: 'Estimated duration (only when stepId is provided)',
+                properties: {
+                  value: { type: 'number', description: 'Duration value' },
+                  unit: { type: 'string', description: 'Duration unit (e.g., hours, days, minutes)' },
+                },
+              },
+              actions: { 
+                type: 'array',
+                description: 'Actions to perform (only when stepId is provided). Supported types: create_file, edit_file, delete_file, run_command, test, review, documentation, custom',
+                items: {
+                  type: 'object',
+                  properties: {
+                    type: { 
+                      type: 'string',
+                      description: 'Action type: create_file, edit_file, delete_file, run_command, test, review, documentation, custom',
+                    },
+                    description: { type: 'string', description: 'Action description' },
+                    filePath: { type: 'string', description: 'File path (for file operations)' },
+                    content: { type: 'string', description: 'File content (for create_file)' },
+                    before: { type: 'string', description: 'Content before edit (for edit_file)' },
+                    after: { type: 'string', description: 'Content after edit (for edit_file)' },
+                    command: { type: 'string', description: 'Command to run (for run_command)' },
+                    testCommand: { type: 'string', description: 'Test command (for test)' },
+                    testFiles: { type: 'array', items: { type: 'string' }, description: 'Test files (for test)' },
+                    checklistItems: { type: 'array', items: { type: 'string' }, description: 'Checklist items (for review)' },
+                    sections: { type: 'array', items: { type: 'string' }, description: 'Documentation sections (for documentation)' },
+                    payload: { type: 'object', description: 'Additional custom data' },
+                  },
+                  required: ['type'],
+                },
+              },
+              validation: {
+                type: 'object',
+                description: 'Validation criteria (only when stepId is provided)',
+                properties: {
+                  criteria: { type: 'array', items: { type: 'string' } },
+                  automatedTests: { type: 'array', items: { type: 'string' } },
+                },
+              },
+            },
+            required: ['planId'],
           },
         },
         {
@@ -207,24 +311,6 @@ export class McpServer {
           },
         },
         {
-          name: 'steps-context',
-          description: 'Get step context: the step itself + dependencies + dependent steps',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              planId: {
-                type: 'string',
-                description: 'The unique identifier of the plan',
-              },
-              stepId: {
-                type: 'string',
-                description: 'The unique identifier of the step',
-              },
-            },
-            required: ['planId', 'stepId'],
-          },
-        },
-        {
           name: 'comments-manage',
           description: 'Get, add, update, or delete comments on plan or steps',
           inputSchema: {
@@ -264,6 +350,74 @@ export class McpServer {
             required: ['action', 'target', 'planId'],
           },
         },
+        {
+          name: 'plan-context-set',
+          description: 'Attach or update file context to a plan (list of file paths without content)',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              planId: {
+                type: 'string',
+                description: 'The unique identifier of the plan',
+              },
+              files: {
+                type: 'array',
+                description: 'List of files to attach to the plan',
+                items: {
+                  type: 'object',
+                  properties: {
+                    path: {
+                      type: 'string',
+                      description: 'Absolute file path (must start with /)',
+                    },
+                    title: {
+                      type: 'string',
+                      description: 'Optional file title',
+                    },
+                    summary: {
+                      type: 'string',
+                      description: 'Optional file summary',
+                    },
+                    lastModified: {
+                      type: 'string',
+                      description: 'Optional ISO 8601 date string',
+                    },
+                  },
+                  required: ['path'],
+                },
+              },
+            },
+            required: ['planId', 'files'],
+          },
+        },
+        {
+          name: 'plan-context-get',
+          description: 'Get the file context attached to a plan',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              planId: {
+                type: 'string',
+                description: 'The unique identifier of the plan',
+              },
+            },
+            required: ['planId'],
+          },
+        },
+        {
+          name: 'plan-context-delete',
+          description: 'Remove all file context from a plan',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              planId: {
+                type: 'string',
+                description: 'The unique identifier of the plan',
+              },
+            },
+            required: ['planId'],
+          },
+        },
       ],
     }));
 
@@ -277,6 +431,9 @@ export class McpServer {
           case 'plans-validate':
             return await this.handleValidatePlan(request.params.arguments);
 
+          case 'plan-context-format':
+            return await this.handleGetContextFormat(request.params.arguments);
+
           case 'plans-create':
             return await this.handleCreatePlan(request.params.arguments);
 
@@ -285,6 +442,9 @@ export class McpServer {
 
           case 'plans-update':
             return await this.handleUpdatePlan(request.params.arguments);
+
+          case 'plans-patch':
+            return await this.handlePatchPlan(request.params.arguments);
 
           case 'plans-list':
             return await this.handleListPlans(request.params.arguments);
@@ -301,6 +461,15 @@ export class McpServer {
           case 'comments-manage':
             return await this.handleCommentsManage(request.params.arguments);
 
+          case 'plan-context-set':
+            return await this.handleSetPlanContext(request.params.arguments);
+
+          case 'plan-context-get':
+            return await this.handleGetPlanContext(request.params.arguments);
+
+          case 'plan-context-delete':
+            return await this.handleDeletePlanContext(request.params.arguments);
+
           default:
             throw new McpError(
               ErrorCode.MethodNotFound,
@@ -310,6 +479,21 @@ export class McpServer {
       } catch (error) {
         if (error instanceof McpError) {
           throw error;
+        }
+        // Gérer les erreurs de validation avec détails
+        if (error instanceof Error && error.name === 'ValidationError') {
+          const validationError = error as any;
+          const errorResponse: any = {
+            message: error.message,
+            errors: validationError.errors || [],
+          };
+          if (validationError.detailedErrors && validationError.detailedErrors.length > 0) {
+            errorResponse.detailedErrors = validationError.detailedErrors;
+          }
+          throw new McpError(
+            ErrorCode.InvalidParams,
+            JSON.stringify(errorResponse)
+          );
         }
         throw new McpError(
           ErrorCode.InternalError,
@@ -328,6 +512,18 @@ export class McpServer {
         {
           type: 'text' as const,
           text: JSON.stringify(result, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async handleGetContextFormat(args: any) {
+    const contextSchema = require('../validation/schemas/context-v1.0.0.json');
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(contextSchema, null, 2),
         },
       ],
     };
@@ -392,6 +588,40 @@ export class McpServer {
     const result = await this.updatePlanUseCase.execute({
       planId: args.planId,
       ...args.updates,
+    });
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async handlePatchPlan(args: any) {
+    if (!args?.planId) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        'Missing required parameter: planId'
+      );
+    }
+
+    const result = await this.patchPlanElementsUseCase.execute({
+      planId: args.planId,
+      stepId: args.stepId,
+      // Plan-level fields
+      metadata: args.metadata,
+      plan: args.plan,
+      // Step-level fields
+      title: args.title,
+      description: args.description,
+      kind: args.kind,
+      status: args.status,
+      dependsOn: args.dependsOn,
+      estimatedDuration: args.estimatedDuration,
+      actions: args.actions,
+      validation: args.validation,
     });
     return {
       content: [
@@ -659,6 +889,59 @@ export class McpServer {
       ErrorCode.InvalidParams,
       'Invalid action or target. Use action: get|add|update|delete and target: plan|step'
     );
+  }
+
+  // ==================== Plan Context Tools ====================
+
+  private async handleSetPlanContext(args: any) {
+    if (!args?.planId) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: planId');
+    }
+    if (!args?.files || !Array.isArray(args.files)) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: files (must be an array)');
+    }
+
+    const result = await this.setPlanContextUseCase.execute(args.planId, args.files);
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async handleGetPlanContext(args: any) {
+    if (!args?.planId) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: planId');
+    }
+
+    const result = await this.getPlanContextUseCase.execute(args.planId);
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async handleDeletePlanContext(args: any) {
+    if (!args?.planId) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: planId');
+    }
+
+    const result = await this.deletePlanContextUseCase.execute(args.planId);
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify({ success: result }, null, 2),
+        },
+      ],
+    };
   }
 
   // ==================== Server Lifecycle ====================
