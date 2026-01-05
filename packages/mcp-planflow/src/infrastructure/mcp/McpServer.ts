@@ -11,6 +11,7 @@ import {
   ValidatePlanUseCase,
   CreatePlanUseCase,
   GetPlanUseCase,
+  GetPlanFormatUseCase,
   UpdatePlanUseCase,
   ListPlansUseCase,
   AddStepCommentUseCase,
@@ -31,6 +32,7 @@ export class McpServer {
     private validatePlanUseCase: ValidatePlanUseCase,
     private createPlanUseCase: CreatePlanUseCase,
     private getPlanUseCase: GetPlanUseCase,
+    private getPlanFormatUseCase: GetPlanFormatUseCase,
     private updatePlanUseCase: UpdatePlanUseCase,
     private listPlansUseCase: ListPlansUseCase,
     private addStepCommentUseCase: AddStepCommentUseCase,
@@ -61,6 +63,15 @@ export class McpServer {
     // List available tools
     this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
       tools: [
+        {
+          name: 'plans-format',
+          description: 'Get the PlanFlow schema specification (v1.1.0) with field descriptions, valid values, and examples',
+          inputSchema: {
+            type: 'object',
+            properties: {},
+            required: [],
+          },
+        },
         {
           name: 'plans-validate',
           description: 'Validate a plan against schema and business rules (dependencies, cycles, unique IDs)',
@@ -260,6 +271,9 @@ export class McpServer {
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       try {
         switch (request.params.name) {
+          case 'plans-format':
+            return await this.handleGetPlanFormat(request.params.arguments);
+
           case 'plans-validate':
             return await this.handleValidatePlan(request.params.arguments);
 
@@ -306,6 +320,18 @@ export class McpServer {
   }
 
   // ==================== Plans Tools ====================
+
+  private async handleGetPlanFormat(args: any) {
+    const result = this.getPlanFormatUseCase.execute();
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    };
+  }
 
   private async handleValidatePlan(args: any) {
     if (!args?.plan) {

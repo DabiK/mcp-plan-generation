@@ -189,7 +189,7 @@ plans-create      Revalider
 
 ## 🎯 Fonctionnalités
 
-- **MCP Server** : 9 outils disponibles pour GitHub Copilot
+- **MCP Server** : 10 outils disponibles pour GitHub Copilot
   - Créer, valider, récupérer, mettre à jour des plans
   - Navigation dans les étapes (suivant, précédent, contexte)
   - Gestion des commentaires sur les plans et étapes
@@ -207,6 +207,7 @@ plans-create      Revalider
 
 | Outil | Description |
 |-------|-------------|
+| `plans-format` | Obtenir le schéma PlanFlow v1.1.0 complet |
 | `plans-create` | Créer un nouveau plan |
 | `plans-get` | Récupérer un plan par ID |
 | `plans-update` | Mettre à jour un plan existant |
