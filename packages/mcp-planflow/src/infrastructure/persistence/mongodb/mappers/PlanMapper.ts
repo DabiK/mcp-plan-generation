@@ -21,6 +21,12 @@ export interface MongoDBPlanDocument {
     constraints?: string[];
     assumptions?: string[];
     successCriteria?: string[];
+    diagrams?: Array<{
+      title: string;
+      type: string;
+      content: string;
+      description?: string;
+    }>;
   };
   steps: Array<{
     id: string;
@@ -49,6 +55,11 @@ export interface MongoDBPlanDocument {
       decision: 'approved' | 'rejected' | 'skipped';
       timestamp: Date;
       reviewer?: string;
+    };
+    diagram?: {
+      type: string;
+      content: string;
+      description?: string;
     };
   }>;
   createdAt: Date;
@@ -84,7 +95,8 @@ export class PlanMapper {
             decision: stepDoc.reviewStatus.decision,
             timestamp: stepDoc.reviewStatus.timestamp,
             reviewer: stepDoc.reviewStatus.reviewer,
-          } : undefined
+          } : undefined,
+          stepDoc.diagram
         )
     );
 
@@ -104,6 +116,12 @@ export class PlanMapper {
       constraints: doc.plan.constraints,
       assumptions: doc.plan.assumptions,
       successCriteria: doc.plan.successCriteria,
+      diagrams: doc.plan.diagrams?.map(d => ({
+        title: d.title,
+        type: d.type as 'flowchart' | 'sequence' | 'class' | 'er' | 'gantt' | 'state',
+        content: d.content,
+        description: d.description,
+      })),
     };
 
     return new Plan(
@@ -142,6 +160,7 @@ export class PlanMapper {
         constraints: plan.plan.constraints,
         assumptions: plan.plan.assumptions,
         successCriteria: plan.plan.successCriteria,
+        diagrams: plan.plan.diagrams,
       },
       steps: plan.steps.map((step) => ({
         id: step.id.getValue(),
@@ -164,7 +183,8 @@ export class PlanMapper {
           decision: step.reviewStatus.decision,
           timestamp: step.reviewStatus.timestamp,
           reviewer: step.reviewStatus.reviewer,
-        } : undefined
+        } : undefined,
+        diagram: step.diagram,
       })),
       createdAt: plan.createdAt,
       updatedAt: plan.updatedAt,

@@ -6,6 +6,7 @@ import { MongoDBPlanRepository } from '../infrastructure/persistence/mongodb/Mon
 import { IPlanRepository } from '../domain/repositories/IPlanRepository';
 import { PlanValidator } from '../infrastructure/validation/PlanValidator';
 import { ContextValidator } from '../infrastructure/validation/ContextValidator';
+import { MermaidValidator } from '../infrastructure/validation/MermaidValidator';
 import { DependencyGraphService } from '../domain/services/DependencyGraphService';
 import { GetPlanFormatUseCase } from '../application/use-cases/GetPlanFormatUseCase';
 import { ValidatePlanUseCase } from '../application/use-cases/ValidatePlanUseCase';
@@ -28,6 +29,7 @@ import { McpSseHandler } from '../infrastructure/http/McpSseHandler';
 export function setupContainer(): void {
   // Register infrastructure services as singletons
   container.registerSingleton(MongoDBConnection);
+  container.registerSingleton(MermaidValidator);
   container.registerSingleton(PlanValidator);
   container.registerSingleton(ContextValidator);
   container.registerSingleton(DependencyGraphService);

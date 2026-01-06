@@ -69,6 +69,8 @@ export const planService = {
     const params = new URLSearchParams();
     if (filters?.planType) params.append('planType', filters.planType);
     if (filters?.status) params.append('status', filters.status);
+    if (filters?.planId) params.append('planId', filters.planId);
+    if (filters?.search) params.append('search', filters.search);
     if (filters?.limit) params.append('limit', filters.limit.toString());
     if (filters?.offset) params.append('offset', filters.offset.toString());
     

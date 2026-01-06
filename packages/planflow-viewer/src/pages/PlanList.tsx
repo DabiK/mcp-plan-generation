@@ -1,12 +1,23 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { usePlans } from '@/hooks/usePlans';
-import { Loader2, FileText, ArrowRight, Search } from 'lucide-react';
+import { Loader2, FileText, ArrowRight, Search, Copy, Check } from 'lucide-react';
 import type { PlanFilters } from '@/types';
 
 export default function PlanList() {
   const [filters, setFilters] = useState<PlanFilters>({});
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const { data: plans, isLoading, error } = usePlans(filters);
+
+  const copyToClipboard = async (id: string) => {
+    try {
+      await navigator.clipboard.writeText(id);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy ID:', err);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -20,37 +31,50 @@ export default function PlanList() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center space-x-4">
-        <div className="relative flex-1">
+      <div className="space-y-4">
+        <div className="flex items-center space-x-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Rechercher par titre ou description..."
+              className="w-full pl-10 pr-4 py-2 bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground"
+              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+            />
+          </div>
+          
+          <select
+            className="px-4 py-2 bg-background border border-border text-foreground focus:outline-none focus:border-foreground"
+            onChange={(e) => setFilters({ ...filters, planType: e.target.value || undefined })}
+          >
+            <option value="">Tous les types</option>
+            <option value="feature">Feature</option>
+            <option value="bugfix">Bugfix</option>
+            <option value="refactor">Refactor</option>
+          </select>
+
+          <select
+            className="px-4 py-2 bg-background border border-border text-foreground focus:outline-none focus:border-foreground"
+            onChange={(e) => setFilters({ ...filters, status: e.target.value || undefined })}
+          >
+            <option value="">Tous les statuts</option>
+            <option value="pending">Pending</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="failed">Failed</option>
+          </select>
+        </div>
+
+        {/* ID Search */}
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Rechercher un plan..."
-            className="w-full pl-10 pr-4 py-2 bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground"
-            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+            placeholder="Rechercher par ID du plan..."
+            className="w-full pl-10 pr-4 py-2 bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground font-mono text-sm"
+            onChange={(e) => setFilters({ ...filters, planId: e.target.value || undefined })}
           />
         </div>
-        
-        <select
-          className="px-4 py-2 bg-background border border-border text-foreground focus:outline-none focus:border-foreground"
-          onChange={(e) => setFilters({ ...filters, planType: e.target.value || undefined })}
-        >
-          <option value="">Tous les types</option>
-          <option value="feature">Feature</option>
-          <option value="bugfix">Bugfix</option>
-          <option value="refactor">Refactor</option>
-        </select>
-
-        <select
-          className="px-4 py-2 bg-background border border-border text-foreground focus:outline-none focus:border-foreground"
-          onChange={(e) => setFilters({ ...filters, status: e.target.value || undefined })}
-        >
-          <option value="">Tous les statuts</option>
-          <option value="pending">Pending</option>
-          <option value="in_progress">In Progress</option>
-          <option value="completed">Completed</option>
-          <option value="failed">Failed</option>
-        </select>
       </div>
 
       {/* Plans List */}
@@ -76,8 +100,30 @@ export default function PlanList() {
                 <div className="flex items-start space-x-3 flex-1">
                   <FileText className="w-5 h-5 mt-0.5 text-muted-foreground" />
                   <div className="flex-1">
-                    <div className="font-semibold group-hover:text-foreground">
-                      {plan.metadata.title}
+                    <div className="flex items-center space-x-3 mb-2">
+                      <div className="font-semibold group-hover:text-foreground">
+                        {plan.metadata.title}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <code className="px-2 py-1 bg-muted text-xs font-mono text-muted-foreground border border-border">
+                          {plan.planId}
+                        </code>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            copyToClipboard(plan.planId);
+                          }}
+                          className="p-1 hover:bg-background rounded transition-colors"
+                          title="Copier l'ID"
+                        >
+                          {copiedId === plan.planId ? (
+                            <Check className="w-3 h-3 text-green-600" />
+                          ) : (
+                            <Copy className="w-3 h-3 text-muted-foreground hover:text-foreground" />
+                          )}
+                        </button>
+                      </div>
                     </div>
                     <div className="text-sm text-muted-foreground mt-1">
                       {plan.metadata.description || 'No description'}

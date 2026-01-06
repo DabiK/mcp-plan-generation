@@ -38,6 +38,7 @@ export class GetPlanUseCase {
         constraints: plan.plan.constraints,
         assumptions: plan.plan.assumptions,
         successCriteria: plan.plan.successCriteria,
+        diagrams: plan.plan.diagrams,
       },
       steps: plan.steps.map((step) => ({
         id: step.id.getValue(),
@@ -60,6 +61,11 @@ export class GetPlanUseCase {
           decision: step.reviewStatus.decision,
           timestamp: step.reviewStatus.timestamp.toISOString(),
           reviewer: step.reviewStatus.reviewer,
+        } : undefined,
+        diagram: step.diagram ? {
+          type: step.diagram.type as 'flowchart' | 'sequence' | 'class' | 'er' | 'gantt' | 'state',
+          content: step.diagram.content,
+          description: step.diagram.description,
         } : undefined,
       })),
       createdAt: plan.createdAt.toISOString(),

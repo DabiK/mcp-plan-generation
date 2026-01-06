@@ -6,6 +6,8 @@ import { Plan } from '../../domain/entities';
 export interface ListPlansInput {
   planType?: string;
   status?: string;
+  planId?: string;
+  search?: string;
   limit?: number;
   offset?: number;
 }
@@ -25,6 +27,8 @@ export class ListPlansUseCase {
     const filters: PlanFilters = {
       planType: input?.planType as any,
       status: input?.status as any,
+      planId: input?.planId,
+      search: input?.search,
       limit: input?.limit,
       offset: input?.offset,
     };

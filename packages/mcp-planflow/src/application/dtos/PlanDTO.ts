@@ -110,6 +110,12 @@ export interface PlanDTO {
     constraints?: string[];
     assumptions?: string[];
     successCriteria?: string[];
+    diagrams?: Array<{
+      title: string;
+      type: 'flowchart' | 'sequence' | 'class' | 'er' | 'gantt' | 'state';
+      content: string;
+      description?: string;
+    }>;
   };
   steps: StepDTO[];
   createdAt: string;
@@ -156,6 +162,11 @@ export interface StepDTO {
   };
   comments?: StepCommentDTO[];
   reviewStatus?: StepReviewStatusDTO;
+  diagram?: {
+    type: 'flowchart' | 'sequence' | 'class' | 'er' | 'gantt' | 'state';
+    content: string;
+    description?: string;
+  };
 }
 
 export interface DetailedValidationErrorDTO {

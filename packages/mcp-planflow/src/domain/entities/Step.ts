@@ -130,7 +130,8 @@ export class Step {
     public actions: Action[] = [],
     public validation?: ValidationCriteria,
     public comments: StepComment[] = [],
-    public reviewStatus?: StepReviewStatus
+    public reviewStatus?: StepReviewStatus,
+    public diagram?: { type: string; content: string; description?: string }
   ) {}
 
   addDependency(stepId: StepId): void {

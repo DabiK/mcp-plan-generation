@@ -13,12 +13,20 @@ export interface PlanMetadata {
   revision: number;
 }
 
+export interface Diagram {
+  title: string;
+  type: 'flowchart' | 'sequence' | 'class' | 'er' | 'gantt' | 'state';
+  content: string;
+  description?: string;
+}
+
 export interface PlanDetails {
   objective: string;
   scope: string;
   constraints?: string[];
   assumptions?: string[];
   successCriteria?: string[];
+  diagrams?: Diagram[];
 }
 
 export interface ValidationResult {

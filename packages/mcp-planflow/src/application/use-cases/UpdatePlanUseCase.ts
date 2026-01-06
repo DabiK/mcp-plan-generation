@@ -55,7 +55,7 @@ export class UpdatePlanUseCase {
     const updatedPlanData = this.buildUpdatedPlanData(existingPlan, input);
 
     // Validate the updated plan
-    const validationResult = this.validator.validate(updatedPlanData);
+    const validationResult = await this.validator.validate(updatedPlanData);
     if (!validationResult.isValid) {
       throw new Error(`Plan validation failed: ${JSON.stringify(validationResult.errors)}`);
     }

@@ -9,6 +9,8 @@ import { StepReviewStatus } from '../entities/Step';
 export interface PlanFilters {
   planType?: PlanType;
   status?: StepStatus;
+  planId?: string;
+  search?: string;
   createdAfter?: Date;
   createdBefore?: Date;
   limit?: number;

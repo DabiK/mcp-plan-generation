@@ -74,6 +74,35 @@
             "type": "string"
           },
           "description": "Criteria to consider the plan successful"
+        },
+        "diagrams": {
+          "type": "array",
+          "description": "Optional Mermaid diagrams for architecture visualization",
+          "items": {
+            "type": "object",
+            "required": ["title", "type", "content"],
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Diagram title"
+              },
+              "type": {
+                "type": "string",
+                "enum": ["flowchart", "sequence", "class", "er", "gantt", "state"],
+                "description": "Mermaid diagram type"
+              },
+              "content": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Mermaid diagram syntax (e.g., 'flowchart TD\\n  A --> B')"
+              },
+              "description": {
+                "type": "string",
+                "description": "Optional description of what the diagram represents"
+              }
+            }
+          }
         }
       }
     },
@@ -156,6 +185,27 @@
               "items": {
                 "type": "string"
               }
+            }
+          }
+        },
+        "diagram": {
+          "type": "object",
+          "description": "Optional Mermaid diagram for step-specific visualization",
+          "required": ["type", "content"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["flowchart", "sequence", "class", "er", "gantt", "state"],
+              "description": "Mermaid diagram type"
+            },
+            "content": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Mermaid diagram syntax (e.g., 'sequenceDiagram\\n  User->>API: Request')"
+            },
+            "description": {
+              "type": "string",
+              "description": "Optional description of what the diagram represents"
             }
           }
         }

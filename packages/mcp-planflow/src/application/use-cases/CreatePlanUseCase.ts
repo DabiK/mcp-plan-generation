@@ -16,7 +16,7 @@ export class CreatePlanUseCase {
 
   async execute(planData: Record<string, any>): Promise<CreatePlanOutputDTO> {
     // Valider le plan
-    const validationResult = this.validator.validate(planData);
+    const validationResult = await this.validator.validate(planData);
     if (!validationResult.isValid) {
       throw new ValidationError(
         'Plan validation failed',
@@ -39,7 +39,10 @@ export class CreatePlanUseCase {
         (stepData.dependsOn || []).map((id: string) => new StepId(id)),
         stepData.estimatedDuration,
         stepData.actions || [],
-        stepData.validation
+        stepData.validation,
+        [],
+        undefined,
+        stepData.diagram
       );
     });
 
@@ -62,6 +65,7 @@ export class CreatePlanUseCase {
       constraints: planData.plan.constraints,
       assumptions: planData.plan.assumptions,
       successCriteria: planData.plan.successCriteria,
+      diagrams: planData.plan.diagrams,
     };
 
     // Créer l'entité Plan
@@ -109,6 +113,7 @@ export class CreatePlanUseCase {
         constraints: plan.plan.constraints,
         assumptions: plan.plan.assumptions,
         successCriteria: plan.plan.successCriteria,
+        diagrams: plan.plan.diagrams,
       },
       steps: plan.steps.map((step) => ({
         id: step.id.getValue(),
@@ -124,6 +129,11 @@ export class CreatePlanUseCase {
           decision: step.reviewStatus.decision,
           timestamp: step.reviewStatus.timestamp.toISOString(),
           reviewer: step.reviewStatus.reviewer,
+        } : undefined,
+        diagram: step.diagram ? {
+          type: step.diagram.type as 'flowchart' | 'sequence' | 'class' | 'er' | 'gantt' | 'state',
+          content: step.diagram.content,
+          description: step.diagram.description,
         } : undefined,
       })),
       createdAt: plan.createdAt.toISOString(),

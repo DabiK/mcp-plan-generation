@@ -1,8 +1,9 @@
-import { injectable } from 'tsyringe';
+import { injectable, inject } from 'tsyringe';
 import Ajv, { ValidateFunction, ErrorObject } from 'ajv';
 import addFormats from 'ajv-formats';
 import planflowSchema from './schemas/planflow-v1.1.0.json';
 import { DetailedValidationError } from '../../domain/errors/ValidationError';
+import { MermaidValidator } from './MermaidValidator';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -16,7 +17,7 @@ export class PlanValidator {
   private ajv: Ajv;
   private validateFunction: ValidateFunction;
 
-  constructor() {
+  constructor(@inject(MermaidValidator) private mermaidValidator?: MermaidValidator) {
     this.ajv = new Ajv({
       allErrors: true,
       verbose: true,
@@ -30,7 +31,7 @@ export class PlanValidator {
   /**
    * Valide un plan contre le JSON Schema
    */
-  validate(plan: unknown): ValidationResult {
+  async validate(plan: unknown): Promise<ValidationResult> {
     const errors: string[] = [];
     const warnings: string[] = [];
     const detailedErrors: DetailedValidationError[] = [];
@@ -96,6 +97,45 @@ export class PlanValidator {
         });
       }
 
+      // Validation des diagrammes Mermaid
+      if (this.mermaidValidator) {
+        // Valider les diagrammes au niveau plan
+        if (plan.plan && plan.plan.diagrams) {
+          for (let i = 0; i < plan.plan.diagrams.length; i++) {
+            const diagram = plan.plan.diagrams[i];
+            const result = await this.mermaidValidator.validate(diagram.type, diagram.content);
+            if (!result.isValid) {
+              const errorMsg = `Invalid Mermaid diagram "${diagram.title}": ${result.error}`;
+              errors.push(errorMsg);
+              detailedErrors.push({
+                path: `/plan/diagrams/${i}`,
+                message: result.error || 'Invalid diagram syntax',
+                errorType: 'format',
+                actualValue: diagram.content,
+              });
+            }
+          }
+        }
+
+        // Valider les diagrammes au niveau steps
+        for (let i = 0; i < plan.steps.length; i++) {
+          const step = plan.steps[i];
+          if (step.diagram) {
+            const result = await this.mermaidValidator.validate(step.diagram.type, step.diagram.content);
+            if (!result.isValid) {
+              const errorMsg = `Invalid Mermaid diagram in step "${step.id}": ${result.error}`;
+              errors.push(errorMsg);
+              detailedErrors.push({
+                path: `/steps/${i}/diagram`,
+                message: result.error || 'Invalid diagram syntax',
+                errorType: 'format',
+                actualValue: step.diagram.content,
+              });
+            }
+          }
+        }
+      }
+
       // Warnings
       if (plan.steps.length === 0) {
         warnings.push('Plan has no steps');
@@ -135,10 +175,14 @@ export class PlanValidator {
    * Type guard pour vérifier qu'un objet a la structure d'un plan
    */
   private isPlanObject(obj: unknown): obj is {
+    plan?: {
+      diagrams?: Array<{ type: string; content: string; title: string; description?: string }>;
+    };
     steps: Array<{
       id: string;
       dependsOn?: string[];
       estimatedDuration?: { value: number; unit: string };
+      diagram?: { type: string; content: string; description?: string };
     }>;
   } {
     return (

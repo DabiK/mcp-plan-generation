@@ -5,13 +5,14 @@ import { useState, useMemo } from 'react';
 import FlowGraph from '@/components/flow/FlowGraph';
 import { planToFlowGraph } from '@/utils/flowHelpers';
 import { ContextTab } from '@/components/plan-detail/ContextTab';
+import { MermaidDiagram } from '@/components/MermaidDiagram';
 
 export default function PlanDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: plan, isLoading, error } = usePlanDetail(id);
   const deleteMutation = useDeletePlan();
-  const [activeTab, setActiveTab] = useState<'overview' | 'review' | 'graph' | 'steps' | 'json' | 'context'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'review' | 'graph' | 'steps' | 'json' | 'context' | 'diagrams'>('overview');
   
   const flowGraph = useMemo(() => {
     if (!plan) return { nodes: [], edges: [] };
@@ -149,6 +150,16 @@ export default function PlanDetail() {
           >
             Context
           </button>
+          <button
+            onClick={() => setActiveTab('diagrams')}
+            className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'diagrams'
+                ? 'border-foreground text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Diagrams {plan.plan.diagrams && plan.plan.diagrams.length > 0 && `(${plan.plan.diagrams.length})`}
+          </button>
         </div>
       </div>
 
@@ -188,6 +199,23 @@ export default function PlanDetail() {
                 )}
               </dl>
             </div>
+
+            {/* Diagrams section */}
+            {plan.plan.diagrams && plan.plan.diagrams.length > 0 && (
+              <div className="border border-border p-6">
+                <h2 className="font-semibold mb-4">Diagrammes</h2>
+                <div className="space-y-6">
+                  {plan.plan.diagrams.map((diagram, index) => (
+                    <MermaidDiagram
+                      key={index}
+                      title={diagram.title}
+                      content={diagram.content}
+                      description={diagram.description}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -228,6 +256,14 @@ export default function PlanDetail() {
                     {step.id}
                   </span>
                 </div>
+                {step.diagram && (
+                  <div className="mt-4">
+                    <MermaidDiagram
+                      content={step.diagram.content}
+                      description={step.diagram.description}
+                    />
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -243,6 +279,25 @@ export default function PlanDetail() {
 
         {activeTab === 'context' && (
           <ContextTab planId={plan.planId} />
+        )}
+
+        {activeTab === 'diagrams' && (
+          <div className="space-y-6">
+            {plan.plan.diagrams && plan.plan.diagrams.length > 0 ? (
+              plan.plan.diagrams.map((diagram, index) => (
+                <MermaidDiagram
+                  key={index}
+                  title={diagram.title}
+                  content={diagram.content}
+                  description={diagram.description}
+                />
+              ))
+            ) : (
+              <div className="border border-border p-8 text-center text-muted-foreground">
+                No diagrams available for this plan
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>

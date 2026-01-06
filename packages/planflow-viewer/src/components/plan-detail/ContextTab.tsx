@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { FileIcon, Tag } from 'lucide-react';
+import { FileIcon, Tag, ExternalLink } from 'lucide-react';
 
 interface ContextFile {
   path: string;
@@ -33,6 +33,13 @@ export function ContextTab({ planId }: { planId: string }) {
     return colors[tag] || 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300';
   };
 
+  const getVSCodeUrl = (path: string) => {
+    // Get workspace root from environment variable
+    const workspaceRoot = import.meta.env.VITE_WORKSPACE_ROOT;
+    const absolutePath = path.startsWith('/') ? `${workspaceRoot}${path}` : `${workspaceRoot}/${path}`;
+    return `vscode://file${absolutePath}`;
+  };
+
   return (
     <div className='space-y-4'>
       <h3 className='text-lg font-semibold'>{data.files.length} file(s)</h3>
@@ -42,10 +49,15 @@ export function ContextTab({ planId }: { planId: string }) {
             <div className='flex items-start gap-3'>
               <FileIcon className='w-5 h-5 text-primary mt-0.5 flex-shrink-0' />
               <div className='flex-1 min-w-0'>
-                {/* Path */}
-                <div className='font-mono text-sm font-medium text-foreground break-all mb-2'>
+                {/* Path - clickable to open in VSCode */}
+                <a
+                  href={getVSCodeUrl(file.path)}
+                  className='font-mono text-sm font-medium text-primary hover:text-primary/80 hover:underline break-all mb-2 inline-flex items-center gap-1.5 group'
+                  title='Open in VSCode'
+                >
                   {file.path}
-                </div>
+                  <ExternalLink className='w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0' />
+                </a>
 
                 {/* Purpose */}
                 {file.purpose && (

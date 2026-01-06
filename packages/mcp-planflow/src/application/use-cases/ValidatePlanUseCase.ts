@@ -6,7 +6,7 @@ import { ValidationResultDTO } from '../dtos';
 export class ValidatePlanUseCase {
   constructor(private validator: PlanValidator) {}
 
-  execute(plan: unknown): ValidationResultDTO {
-    return this.validator.validate(plan);
+  async execute(plan: unknown): Promise<ValidationResultDTO> {
+    return await this.validator.validate(plan);
   }
 }

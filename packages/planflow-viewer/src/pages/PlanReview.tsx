@@ -8,6 +8,7 @@ import { ReviewSummaryHeader } from '@/components/review/ReviewSummaryHeader';
 import { MiniMap } from '@/components/review/MiniMap';
 import { ContextSidebar } from '@/components/review/ContextSidebar';
 import { PlanComments } from '@/components/PlanComments';
+import { MermaidDiagram } from '@/components/MermaidDiagram';
 import { detectPhases, getCurrentPhase, getPhaseStats } from '@/lib/phaseDetection';
 import { FileText } from 'lucide-react';
 import type { ReviewDecision } from '@/types';
@@ -375,7 +376,7 @@ export function PlanReview() {
           </div>
 
           {/* Main content - Step review card */}
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-4xl mx-auto space-y-6">
             <StepReviewCard
               step={currentStep}
               stepNumber={reviewState.currentStepIndex + 1}
@@ -395,6 +396,12 @@ export function PlanReview() {
               onPrevious={previousStep}
               onSkip={handleSkip}
             />
+            {currentStep?.diagram && (
+              <MermaidDiagram
+                content={currentStep.diagram.content}
+                description={currentStep.diagram.description}
+              />
+            )}
           </div>
         </div>
       </div>

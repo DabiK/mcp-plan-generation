@@ -61,6 +61,8 @@ planRouter.get('/', async (req: Request, res: Response) => {
     const filters = {
       planType: req.query.planType as string | undefined,
       status: req.query.status as string | undefined,
+      planId: req.query.planId as string | undefined,
+      search: req.query.search as string | undefined,
       limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
       offset: req.query.offset ? parseInt(req.query.offset as string) : undefined,
     };

@@ -39,6 +39,11 @@ export interface StepDTO {
     timestamp: string;
     reviewer?: string;
   };
+  diagram?: {
+    type: 'flowchart' | 'sequence' | 'class' | 'er' | 'gantt' | 'state';
+    content: string;
+    description?: string;
+  };
 }
 
 export interface PlanDTO {
@@ -61,6 +66,12 @@ export interface PlanDTO {
     constraints?: string[];
     assumptions?: string[];
     successCriteria?: string[];
+    diagrams?: Array<{
+      title: string;
+      type: 'flowchart' | 'sequence' | 'class' | 'er' | 'gantt' | 'state';
+      content: string;
+      description?: string;
+    }>;
   };
   steps: StepDTO[];
   createdAt: string;
@@ -126,6 +137,7 @@ export interface FlowEdge {
 export interface PlanFilters {
   planType?: string;
   status?: string;
+  planId?: string;
   search?: string;
   limit?: number;
   offset?: number;

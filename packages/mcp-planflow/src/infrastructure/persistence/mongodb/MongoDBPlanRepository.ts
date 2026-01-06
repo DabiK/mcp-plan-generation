@@ -57,6 +57,17 @@ export class MongoDBPlanRepository implements IPlanRepository {
       query['steps.status'] = filters.status;
     }
 
+    if (filters?.planId) {
+      query.planId = filters.planId;
+    }
+
+    if (filters?.search) {
+      query.$or = [
+        { 'metadata.title': { $regex: filters.search, $options: 'i' } },
+        { 'metadata.description': { $regex: filters.search, $options: 'i' } }
+      ];
+    }
+
     if (filters?.createdAfter || filters?.createdBefore) {
       query['metadata.createdAt'] = {};
       if (filters.createdAfter) {
