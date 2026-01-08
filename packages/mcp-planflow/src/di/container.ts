@@ -20,6 +20,12 @@ import { StepNavigationUseCases } from '../application/use-cases/StepNavigationU
 import { PatchPlanElementsUseCase } from '../application/use-cases/PatchPlanElementsUseCase';
 import { SetPlanContextUseCase } from '../application/use-cases/SetPlanContextUseCase';
 import { GetPlanContextUseCase } from '../application/use-cases/GetPlanContextUseCase';
+import { CreatePlanDraftUseCase } from '../application/use-cases/CreatePlanDraftUseCase';
+import { AddStepToPlanUseCase } from '../application/use-cases/AddStepToPlanUseCase';
+import { UpdateStepInPlanUseCase } from '../application/use-cases/UpdateStepInPlanUseCase';
+import { RemoveStepFromPlanUseCase } from '../application/use-cases/RemoveStepFromPlanUseCase';
+import { UpdatePlanMetadataUseCase } from '../application/use-cases/UpdatePlanMetadataUseCase';
+import { FinalizePlanUseCase } from '../application/use-cases/FinalizePlanUseCase';
 import { DeletePlanContextUseCase } from '../application/use-cases/DeletePlanContextUseCase';
 import { PlanContextRepository } from '../infrastructure/database/repositories/PlanContextRepository';
 import { McpServer } from '../infrastructure/mcp/McpServer';
@@ -62,8 +68,12 @@ export function setupContainer(): void {
   container.registerSingleton(SetPlanContextUseCase);
   container.registerSingleton(GetPlanContextUseCase);
   container.registerSingleton(DeletePlanContextUseCase);
-
-  // Register MCP server
+  container.registerSingleton(CreatePlanDraftUseCase);
+  container.registerSingleton(AddStepToPlanUseCase);
+  container.registerSingleton(UpdateStepInPlanUseCase);
+  container.registerSingleton(RemoveStepFromPlanUseCase);
+  container.registerSingleton(UpdatePlanMetadataUseCase);
+  container.registerSingleton(FinalizePlanUseCase);
   container.registerSingleton(McpServer);
   
   // Register MCP Server instance for SSE

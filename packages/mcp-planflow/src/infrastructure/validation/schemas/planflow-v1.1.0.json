@@ -172,7 +172,7 @@
           "default": []
         },
         "validation": {
-          "type": "object",
+          "type": ["object", "null"],
           "properties": {
             "criteria": {
               "type": "array",

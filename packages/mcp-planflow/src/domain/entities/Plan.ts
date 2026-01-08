@@ -1,6 +1,7 @@
 import { PlanId } from '../value-objects/PlanId';
 import { StepId } from '../value-objects/StepId';
 import { PlanType } from '../value-objects/PlanType';
+import { PlanStatus } from '../value-objects/PlanStatus';
 import { Step } from './Step';
 
 export interface PlanMetadata {
@@ -40,6 +41,7 @@ export class Plan {
     public readonly id: PlanId,
     public schemaVersion: string,
     public planType: PlanType,
+    public status: PlanStatus,
     public metadata: PlanMetadata,
     public plan: PlanDetails,
     public steps: Step[],
@@ -69,6 +71,9 @@ export class Plan {
     }
     
     const currentStep = this.steps[stepIndex];
+    console.log('[Plan.updateStep] Current step diagram:', currentStep.diagram);
+    console.log('[Plan.updateStep] Updates diagram:', updates.diagram);
+    
     this.steps[stepIndex] = new Step(
       currentStep.id,
       updates.title ?? currentStep.title,
@@ -78,8 +83,13 @@ export class Plan {
       updates.dependsOn ?? currentStep.dependsOn,
       updates.estimatedDuration ?? currentStep.estimatedDuration,
       updates.actions ?? currentStep.actions,
-      updates.validation ?? currentStep.validation
+      updates.validation ?? currentStep.validation,
+      updates.comments ?? currentStep.comments,
+      updates.reviewStatus ?? currentStep.reviewStatus,
+      updates.diagram ?? currentStep.diagram
     );
+    
+    console.log('[Plan.updateStep] New step diagram:', this.steps[stepIndex].diagram);
     this.updatedAt = new Date();
   }
 
@@ -91,7 +101,22 @@ export class Plan {
     const errors: string[] = [];
     const warnings: string[] = [];
 
-    // Vérifier les IDs uniques
+    // Si le plan est en draft, validation allégée
+    if (this.status === PlanStatus.DRAFT) {
+      // En draft, 0 steps est acceptable
+      if (this.steps.length === 0) {
+        warnings.push('Draft plan has no steps');
+      }
+    } else {
+      // Plan non-draft (active/completed/cancelled) : validation complète
+      
+      // Avertir si aucun step
+      if (this.steps.length === 0) {
+        errors.push('Plan must have at least one step');
+      }
+    }
+
+    // Vérifier les IDs uniques (pour tous les plans)
     const stepIds = new Set<string>();
     for (const step of this.steps) {
       const id = step.id.getValue();
@@ -101,7 +126,7 @@ export class Plan {
       stepIds.add(id);
     }
 
-    // Vérifier les références de dépendances
+    // Vérifier les références de dépendances (pour tous les plans)
     for (const step of this.steps) {
       for (const depId of step.dependsOn) {
         if (!this.steps.some((s) => s.id.equals(depId))) {
@@ -110,11 +135,6 @@ export class Plan {
           );
         }
       }
-    }
-
-    // Avertir si aucun step
-    if (this.steps.length === 0) {
-      warnings.push('Plan has no steps');
     }
 
     return {
@@ -195,6 +215,28 @@ export class Plan {
 
   incrementRevision(): void {
     this.revision += 1;
+    this.updatedAt = new Date();
+  }
+
+  isDraft(): boolean {
+    return this.status === PlanStatus.DRAFT;
+  }
+
+  finalize(): void {
+    if (!this.isDraft()) {
+      throw new Error('Only draft plans can be finalized');
+    }
+    
+    if (this.steps.length === 0) {
+      throw new Error('Cannot finalize plan with no steps');
+    }
+
+    const validation = this.validate();
+    if (!validation.isValid) {
+      throw new Error(`Cannot finalize plan: ${validation.errors.join(', ')}`);
+    }
+
+    this.status = PlanStatus.ACTIVE;
     this.updatedAt = new Date();
   }
 }

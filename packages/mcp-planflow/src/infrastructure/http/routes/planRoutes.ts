@@ -19,7 +19,15 @@ import {
 } from '../../../application/use-cases/PlanCommentUseCases';
 import { SetStepReviewStatusUseCase } from '../../../application/use-cases/SetStepReviewStatusUseCase';
 import { GetPlanContextUseCase } from '../../../application/use-cases/GetPlanContextUseCase';
+import { CreatePlanDraftUseCase } from '../../../application/use-cases/CreatePlanDraftUseCase';
+import { AddStepToPlanUseCase } from '../../../application/use-cases/AddStepToPlanUseCase';
+import { UpdateStepInPlanUseCase } from '../../../application/use-cases/UpdateStepInPlanUseCase';
+import { RemoveStepFromPlanUseCase } from '../../../application/use-cases/RemoveStepFromPlanUseCase';
+import { UpdatePlanMetadataUseCase } from '../../../application/use-cases/UpdatePlanMetadataUseCase';
+import { FinalizePlanUseCase } from '../../../application/use-cases/FinalizePlanUseCase';
 import { PlanNotFoundError } from '../../../domain/errors/PlanNotFoundError';
+import { ValidationError } from '../../../domain/errors/ValidationError';
+import { PlanId } from '../../../domain/value-objects/PlanId';
 
 export const planRouter = Router();
 
@@ -157,22 +165,21 @@ planRouter.put('/:id', async (req: Request, res: Response) => {
 planRouter.delete('/:id', async (req: Request, res: Response) => {
   try {
     const repository = container.resolve('IPlanRepository');
-    const deleted = await (repository as any).delete(req.params.id);
-    
-    if (!deleted) {
+    await (repository as any).delete(new PlanId(req.params.id));
+    res.status(204).send();
+  } catch (error) {
+    if (error instanceof PlanNotFoundError) {
       res.status(404).json({
         error: 'Not Found',
-        message: `Plan with ID ${req.params.id} not found`,
+        message: error.message,
       });
     } else {
-      res.status(204).send();
+      console.error('Error in DELETE /plans/:id:', error);
+      res.status(500).json({
+        error: 'Internal Server Error',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
     }
-  } catch (error) {
-    console.error('Error in DELETE /plans/:id:', error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: error instanceof Error ? error.message : 'Unknown error',
-    });
   }
 });
 
@@ -381,5 +388,187 @@ planRouter.get('/:planId/context', async (req: Request, res: Response) => {
       error: 'Internal Server Error',
       message: error instanceof Error ? error.message : 'Unknown error',
     });
+  }
+});
+
+// ========== INCREMENTAL PLAN CREATION ROUTES ==========
+
+// POST /api/plans/draft - Create a new draft plan
+planRouter.post('/draft', async (req: Request, res: Response) => {
+  try {
+    const useCase = container.resolve(CreatePlanDraftUseCase);
+    const result = await useCase.execute(req.body);
+    res.status(201).json(result);
+  } catch (error) {
+    console.error('Error in POST /plans/draft:', error);
+    
+    if (error instanceof ValidationError) {
+      res.status(400).json({
+        error: 'Validation Error',
+        message: error.message,
+        details: error.errors,
+      });
+    } else {
+      res.status(500).json({
+        error: 'Internal Server Error',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+});
+
+// POST /api/plans/:id/steps - Add a step to a plan
+planRouter.post('/:id/steps', async (req: Request, res: Response) => {
+  try {
+    const useCase = container.resolve(AddStepToPlanUseCase);
+    const result = await useCase.execute({
+      planId: req.params.id,
+      step: req.body,
+    });
+    res.status(201).json(result);
+  } catch (error) {
+    console.error('Error in POST /plans/:id/steps:', error);
+    
+    if (error instanceof PlanNotFoundError) {
+      res.status(404).json({
+        error: 'Not Found',
+        message: error.message,
+      });
+    } else if (error instanceof ValidationError) {
+      res.status(400).json({
+        error: 'Validation Error',
+        message: error.message,
+        details: error.errors,
+      });
+    } else {
+      res.status(500).json({
+        error: 'Internal Server Error',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+});
+
+// PUT /api/plans/:id/steps/:stepId - Update a step in a plan
+planRouter.put('/:id/steps/:stepId', async (req: Request, res: Response) => {
+  try {
+    const useCase = container.resolve(UpdateStepInPlanUseCase);
+    const result = await useCase.execute({
+      planId: req.params.id,
+      stepId: req.params.stepId,
+      updates: req.body,
+    });
+    res.json(result);
+  } catch (error) {
+    console.error('Error in PUT /plans/:id/steps/:stepId:', error);
+    
+    if (error instanceof PlanNotFoundError) {
+      res.status(404).json({
+        error: 'Not Found',
+        message: error.message,
+      });
+    } else if (error instanceof ValidationError) {
+      res.status(400).json({
+        error: 'Validation Error',
+        message: error.message,
+        details: error.errors,
+      });
+    } else {
+      res.status(500).json({
+        error: 'Internal Server Error',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+});
+
+// DELETE /api/plans/:id/steps/:stepId - Remove a step from a plan
+planRouter.delete('/:id/steps/:stepId', async (req: Request, res: Response) => {
+  try {
+    const useCase = container.resolve(RemoveStepFromPlanUseCase);
+    const result = await useCase.execute({
+      planId: req.params.id,
+      stepId: req.params.stepId,
+      mode: (req.query.mode as 'strict' | 'cascade') || 'strict',
+    });
+    res.json(result);
+  } catch (error) {
+    console.error('Error in DELETE /plans/:id/steps/:stepId:', error);
+    
+    if (error instanceof PlanNotFoundError) {
+      res.status(404).json({
+        error: 'Not Found',
+        message: error.message,
+      });
+    } else if (error instanceof ValidationError) {
+      res.status(400).json({
+        error: 'Validation Error',
+        message: error.message,
+        details: error.errors,
+      });
+    } else {
+      res.status(500).json({
+        error: 'Internal Server Error',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+});
+
+// PATCH /api/plans/:id/metadata - Update plan metadata
+planRouter.patch('/:id/metadata', async (req: Request, res: Response) => {
+  try {
+    const useCase = container.resolve(UpdatePlanMetadataUseCase);
+    const result = await useCase.execute({
+      planId: req.params.id,
+      metadata: req.body.metadata,
+      planDetails: req.body.planDetails,
+    });
+    res.json(result);
+  } catch (error) {
+    console.error('Error in PATCH /plans/:id/metadata:', error);
+    
+    if (error instanceof PlanNotFoundError) {
+      res.status(404).json({
+        error: 'Not Found',
+        message: error.message,
+      });
+    } else {
+      res.status(500).json({
+        error: 'Internal Server Error',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+});
+
+// POST /api/plans/:id/finalize - Finalize a draft plan
+planRouter.post('/:id/finalize', async (req: Request, res: Response) => {
+  try {
+    const useCase = container.resolve(FinalizePlanUseCase);
+    const result = await useCase.execute({
+      planId: req.params.id,
+    });
+    res.json(result);
+  } catch (error) {
+    console.error('Error in POST /plans/:id/finalize:', error);
+    
+    if (error instanceof PlanNotFoundError) {
+      res.status(404).json({
+        error: 'Not Found',
+        message: error.message,
+      });
+    } else if (error instanceof ValidationError) {
+      res.status(400).json({
+        error: 'Validation Error',
+        message: error.message,
+        details: error.errors,
+      });
+    } else {
+      res.status(500).json({
+        error: 'Internal Server Error',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
   }
 });

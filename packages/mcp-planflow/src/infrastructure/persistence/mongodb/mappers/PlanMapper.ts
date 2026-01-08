@@ -1,11 +1,12 @@
 import { Plan, PlanMetadata, PlanDetails, Step, Duration, Action, ValidationCriteria } from '../../../../domain/entities';
-import { PlanId, StepId, PlanType, StepKind, StepStatus } from '../../../../domain/value-objects';
+import { PlanId, StepId, PlanType, StepKind, StepStatus, PlanStatus } from '../../../../domain/value-objects';
 
 export interface MongoDBPlanDocument {
   _id?: any;
   planId: string;
   schemaVersion: string;
   planType: string;
+  status?: string; // Added for backward compatibility
   metadata: {
     title: string;
     description: string;
@@ -128,6 +129,7 @@ export class PlanMapper {
       new PlanId(doc.planId),
       doc.schemaVersion,
       doc.planType as PlanType,
+      doc.status as PlanStatus, // Status doit être présent en base
       metadata,
       planDetails,
       steps,

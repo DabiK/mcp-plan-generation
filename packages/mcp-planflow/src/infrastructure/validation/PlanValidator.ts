@@ -4,6 +4,9 @@ import addFormats from 'ajv-formats';
 import planflowSchema from './schemas/planflow-v1.1.0.json';
 import { DetailedValidationError } from '../../domain/errors/ValidationError';
 import { MermaidValidator } from './MermaidValidator';
+import { getSchemaMetadata } from '../mcp/decorators/schema-metadata';
+import { StepMcpInputDTO } from '../mcp/types/StepMcpInputDTO';
+import { generateMcpSchema } from '../mcp/schema-generator';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -158,17 +161,187 @@ export class PlanValidator {
   }
 
   /**
+   * Valide un array de steps contre le schéma JSON et vérifie la cohérence
+   */
+  async validateSteps(steps: unknown[]): Promise<ValidationResult> {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    const detailedErrors: DetailedValidationError[] = [];
+
+    // Générer le schéma pour StepMcpInputDTO
+    const stepSchema = generateMcpSchema(StepMcpInputDTO);
+    
+    // Créer un validateur Ajv pour le step
+    const validateStepFunction = this.ajv.compile(stepSchema);
+    
+    // Validation JSON Schema de chaque step
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
+      const isValid = validateStepFunction(step);
+      
+      if (!isValid && validateStepFunction.errors) {
+        for (const error of validateStepFunction.errors) {
+          const path = `/steps/${i}${error.instancePath || ''}`;
+          const message = error.message || 'Unknown error';
+          errors.push(`${path}: ${message}`);
+          
+          // Convertir en DetailedValidationError avec le schéma du step
+          const detailedError = this.convertAjvErrorForStep(error, stepSchema, i);
+          detailedErrors.push(detailedError);
+        }
+      }
+    }
+
+    // Validation de cohérence entre les steps
+    if (errors.length === 0 && this.isStepsArray(steps)) {
+      // Vérifier les IDs uniques
+      const stepIds = new Set<string>();
+      for (const step of steps) {
+        if (stepIds.has(step.id)) {
+          const errorMsg = `Duplicate step ID: ${step.id}`;
+          errors.push(errorMsg);
+          detailedErrors.push({
+            path: `/steps/${step.id}`,
+            message: errorMsg,
+            errorType: 'business',
+            actualValue: step.id,
+          });
+        }
+        stepIds.add(step.id);
+      }
+
+      // Vérifier les références de dépendances
+      for (const step of steps) {
+        if (step.dependsOn) {
+          for (const depId of step.dependsOn) {
+            if (!stepIds.has(depId)) {
+              const errorMsg = `Step "${step.id}" depends on non-existent step "${depId}"`;
+              errors.push(errorMsg);
+              detailedErrors.push({
+                path: `/steps/${step.id}/dependsOn`,
+                message: errorMsg,
+                errorType: 'business',
+                actualValue: depId,
+              });
+            }
+          }
+        }
+      }
+
+      // Vérifier les cycles de dépendances
+      if (this.hasCyclicDependencies(steps)) {
+        const errorMsg = 'Cyclic dependencies detected in steps';
+        errors.push(errorMsg);
+        detailedErrors.push({
+          path: '/steps',
+          message: errorMsg,
+          errorType: 'business',
+        });
+      }
+    }
+
+    return { isValid: errors.length === 0, errors, warnings, detailedErrors };
+  }
+
+  /**
    * Convertit une erreur Ajv en DetailedValidationError
    */
   private convertAjvError(error: ErrorObject): DetailedValidationError {
+    const path = error.instancePath || 'root';
+    let message = error.message || 'Unknown validation error';
+    
+    // Enrichir l'erreur avec le schéma de la classe si applicable
+    const classSchema = this.getClassSchema(path);
+    let expectedSchema: any = undefined;
+    
+    if (classSchema) {
+      expectedSchema = classSchema;
+      // Ajouter la description du champ spécifique si disponible
+      const fieldDescription = this.getFieldDescription(path);
+      if (fieldDescription) {
+        message = `${fieldDescription}. ${message}`;
+      }
+    }
+    
     return {
-      path: error.instancePath || 'root',
-      message: error.message || 'Unknown validation error',
+      path,
+      message,
       errorType: 'schema',
       expectedValue: error.params,
       actualValue: error.data,
       schemaKeyword: error.keyword,
+      expectedSchema, // Nouveau champ pour inclure le schéma complet
     };
+  }
+
+  /**
+   * Récupère le schéma complet d'une classe basé sur son chemin JSON
+   */
+  private getClassSchema(jsonPath: string): any | null {
+    // Parser le chemin JSON pour identifier la classe
+    const pathParts = jsonPath.split('/').filter(p => p !== '');
+    
+    if (pathParts.length === 0) {
+      return null;
+    }
+    
+    // Cas spécifique pour les steps: /steps/0/* -> StepMcpInputDTO
+    if (pathParts[0] === 'steps' && pathParts.length >= 2) {
+      const stepIndex = parseInt(pathParts[1]);
+      if (!isNaN(stepIndex)) {
+        // Générer le schéma complet pour StepMcpInputDTO
+        return generateMcpSchema(StepMcpInputDTO);
+      }
+    }
+    
+    // Autres cas peuvent être ajoutés ici si nécessaire
+    // Par exemple pour les metadata, plan, etc.
+    
+    return null;
+  }
+
+  /**
+   * Récupère la description d'un champ basé sur son chemin JSON
+   */
+  private getFieldDescription(jsonPath: string): string | null {
+    // Parser le chemin JSON pour identifier le champ
+    const pathParts = jsonPath.split('/').filter(p => p !== '');
+    
+    if (pathParts.length === 0) {
+      return null;
+    }
+    
+    // Cas spécifique pour les steps: /steps/0/kind -> kind dans StepMcpInputDTO
+    if (pathParts[0] === 'steps' && pathParts.length >= 2) {
+      const stepIndex = parseInt(pathParts[1]);
+      if (!isNaN(stepIndex) && pathParts.length >= 3) {
+        const fieldName = pathParts[2];
+        const metadata = getSchemaMetadata(StepMcpInputDTO);
+        const fieldMetadata = metadata.get(fieldName);
+        return fieldMetadata?.description || null;
+      }
+    }
+    
+    // Autres cas peuvent être ajoutés ici si nécessaire
+    // Par exemple pour les metadata, plan, etc.
+    
+    return null;
+  }
+
+  /**
+   * Type guard pour vérifier qu'un array contient des steps
+   */
+  private isStepsArray(arr: unknown[]): arr is Array<{
+    id: string;
+    dependsOn?: string[];
+  }> {
+    return arr.every(
+      (item) =>
+        typeof item === 'object' &&
+        item !== null &&
+        'id' in item &&
+        typeof (item as any).id === 'string'
+    );
   }
 
   /**
@@ -242,5 +415,33 @@ export class PlanValidator {
     return errors
       .map((err, index) => `${index + 1}. ${err}`)
       .join('\n');
+  }
+
+  /**
+   * Convertit une erreur Ajv en DetailedValidationError pour un step
+   */
+  private convertAjvErrorForStep(error: ErrorObject, stepSchema: any, stepIndex?: number): DetailedValidationError {
+    const basePath = error.instancePath || '';
+    const path = stepIndex !== undefined ? `/steps/${stepIndex}${basePath}` : basePath;
+    let message = error.message || 'Unknown validation error';
+    
+    // Enrichir le message avec la description du champ si disponible
+    const fieldName = basePath.split('/').filter(p => p !== '').pop();
+    if (fieldName && stepSchema.properties && stepSchema.properties[fieldName]) {
+      const fieldDescription = stepSchema.properties[fieldName].description;
+      if (fieldDescription) {
+        message = `${fieldDescription}. ${message}`;
+      }
+    }
+    
+    return {
+      path,
+      message,
+      errorType: 'schema',
+      expectedValue: error.params,
+      actualValue: error.data,
+      schemaKeyword: error.keyword,
+      expectedSchema: stepSchema, // Inclure le schéma complet du step
+    };
   }
 }

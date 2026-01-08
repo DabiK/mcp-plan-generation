@@ -18,7 +18,9 @@
     "test:e2e": "vitest tests/e2e",
     "test:coverage": "vitest --coverage",
     "lint": "eslint src/**/*.ts",
-    "format": "prettier --write src/**/*.ts"
+    "format": "prettier --write src/**/*.ts",
+    "migrate:add-status": "tsx scripts/migrate-add-status.ts",
+    "schema:update-step": "tsx scripts/generate-update-step-schema.ts"
   },
   "keywords": [
     "mcp",

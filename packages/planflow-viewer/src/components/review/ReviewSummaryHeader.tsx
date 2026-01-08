@@ -24,6 +24,7 @@ export function ReviewSummaryHeader({ plan, stats, currentStepIndex, currentPhas
   const [copiedReviewSummary, setCopiedReviewSummary] = useState(false);
   const [copiedUpdatePlan, setCopiedUpdatePlan] = useState(false);
   const [copiedDetailedAnalysis, setCopiedDetailedAnalysis] = useState(false);
+  const [copiedEnrichPlan, setCopiedEnrichPlan] = useState(false);
 
   const copyToClipboard = async (text: string, setCopied: (val: boolean) => void) => {
     try {
@@ -40,74 +41,63 @@ export function ReviewSummaryHeader({ plan, stats, currentStepIndex, currentPhas
   };
 
   const handleCopyReviewSummary = () => {
-    const prompt = `Voici un plan qui a été revu. Peux-tu me donner un résumé détaillé de cette revue et suggérer des améliorations ?
+    const prompt = `Récupère le plan ${plan.planId} et analyse les commentaires de revue.
 
-Plan: ${plan.metadata.title}
-Description: ${plan.metadata.description}
-ID: ${plan.planId}
+Statistiques actuelles:
+- ${stats.approved} approuvées, ${stats.rejected} rejetées, ${stats.skipped} ignorées, ${stats.pending} en attente
+- Progression: étape ${currentStepIndex + 1}/${plan.steps.length}
 
-Statistiques de revue actuelles:
-- Approuvées: ${stats.approved}
-- Rejetées: ${stats.rejected}
-- Ignorées: ${stats.skipped}
-- En attente: ${stats.pending}
-
-Étape actuelle: ${currentStepIndex + 1}/${plan.steps.length}
-
-Peux-tu analyser cette revue et proposer des actions d'amélioration ?`;
+Fournis un résumé détaillé des retours, identifie les patterns dans les commentaires, et propose des actions d'amélioration prioritaires.`;
 
     copyToClipboard(prompt, setCopiedReviewSummary);
   };
 
   const handleCopyUpdatePlan = () => {
-    const prompt = `Voici un plan avec ses commentaires de revue. Peux-tu mettre à jour le plan en intégrant les retours et commentaires ?
+    const prompt = `Mets à jour le plan ${plan.planId} en te basant sur les commentaires de revue.
 
-Plan actuel:
-${JSON.stringify(plan, null, 2)}
+Instructions:
+1. Récupère le plan et tous ses commentaires (plan-level et step-level)
+2. Analyse les retours et identifie les modifications nécessaires
+3. Applique les changements via plans-patch ou plans-update-step selon les besoins
+4. Priorise les commentaires des étapes rejetées et en attente
+5. Préserve la cohérence des dépendances et de la structure
 
-Commentaires de revue:
-[Commentaires de revue à insérer ici]
-
-Plan comments:
-[Commentaires du plan à insérer ici]
-
-Peux-tu proposer une version mise à jour du plan qui intègre ces retours ?`;
+Fournis un résumé des modifications apportées.`;
 
     copyToClipboard(prompt, setCopiedUpdatePlan);
   };
 
   const handleCopyDetailedAnalysis = () => {
-    const prompt = `Voici un plan détaillé. Peux-tu me donner une analyse approfondie de ce plan, identifier les forces et faiblesses, et suggérer des améliorations ?
+    const prompt = `Analyse en profondeur le plan ${plan.planId}.
 
-Plan: ${plan.metadata.title}
-Description: ${plan.metadata.description}
-Type: ${plan.planType}
-ID: ${plan.planId}
-Objectif: ${plan.plan.objective}
-Scope: ${plan.plan.scope}
+Axes d'analyse:
+1. **Structure et cohérence**: Évalue la logique des ${plan.steps.length} étapes, la pertinence des dépendances, et la couverture de l'objectif
+2. **Qualité des critères**: Vérifie les critères de validation, les tests automatisés, et les indicateurs de succès
+3. **Risques et blocages**: Identifie les points critiques, dépendances circulaires potentielles, et étapes à risque
+4. **Complétude**: Évalue les actions définies, la documentation, et les diagrammes
+5. **Estimations**: Analyse la cohérence des durées estimées et la charge globale
 
-Étapes (${plan.steps.length}):
-${plan.steps.map((step, index) => 
-  `${index + 1}. ${step.title}
-   - Description: ${step.description}
-   - Type: ${step.kind}
-   - Statut: ${step.status}
-   - Actions: ${step.actions?.length || 0}
-   ${step.dependsOn?.length ? `- Dépendances: ${step.dependsOn.join(', ')}` : ''}`
-).join('\n\n')}
-
-${plan.plan.diagrams?.length ? `Diagrammes (${plan.plan.diagrams.length}):
-${plan.plan.diagrams.map(d => `- ${d.title}: ${d.type}`).join('\n')}` : ''}
-
-Analyse demandée:
-1. Évaluation de la structure du plan
-2. Cohérence des dépendances entre étapes
-3. Clarté des objectifs et critères de succès
-4. Suggestions d'amélioration
-5. Points de risque identifiés`;
+Fournis une note /10, les forces principales, les faiblesses critiques, et 3-5 recommandations d'amélioration concrètes.`;
 
     copyToClipboard(prompt, setCopiedDetailedAnalysis);
   };
+
+  const handleCopyEnrichPlan = () => {
+    const prompt = `Enrichis le plan ${plan.planId} pour le rendre plus complet et professionnel.
+
+Améliorations attendues:
+1. **Actions détaillées**: Ajoute des actions concrètes pour chaque étape (create_file, edit_file, run_command, test, etc.)
+2. **Critères de validation**: Renforce les critères de succès et ajoute des tests automatisés pertinents
+3. **Diagrammes**: Crée ou améliore les diagrammes Mermaid pour visualiser l'architecture, les flux, ou les processus
+4. **Documentation**: Enrichis les descriptions avec plus de contexte et de détails techniques
+5. **Estimations**: Affine les durées estimées si nécessaire
+6. **Dépendances**: Vérifie et optimise les dépendances entre étapes
+
+Utilise plans-patch pour mettre à jour les éléments du plan et plans-update-step pour les étapes individuelles. Fournis un résumé des enrichissements apportés.`;
+
+    copyToClipboard(prompt, setCopiedEnrichPlan);
+  };
+
   const totalSteps = plan.steps.length;
   const progress = ((currentStepIndex + 1) / totalSteps) * 100;
   
@@ -234,6 +224,28 @@ Analyse demandée:
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
                   <span>Analyser Plan</span>
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={handleCopyEnrichPlan}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-600 dark:text-blue-400 rounded-lg transition-colors"
+              title="Copier prompt pour enrichir le plan"
+            >
+              {copiedEnrichPlan ? (
+                <>
+                  <svg className="w-3.5 h-3.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-green-500">Copié !</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  <span>Enrichir Plan</span>
                 </>
               )}
             </button>

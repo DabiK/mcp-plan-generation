@@ -2,7 +2,7 @@ import { injectable, inject } from 'tsyringe';
 import { nanoid } from 'nanoid';
 import { IPlanRepository } from '../../domain/repositories/IPlanRepository';
 import { Plan, PlanMetadata, PlanDetails, Step } from '../../domain/entities';
-import { PlanId, StepId, PlanType, StepKind, StepStatus } from '../../domain/value-objects';
+import { PlanId, StepId, PlanType, StepKind, StepStatus, PlanStatus } from '../../domain/value-objects';
 import { PlanValidator } from '../../infrastructure/validation/PlanValidator';
 import { ValidationError } from '../../domain/errors/ValidationError';
 import { PlanDTO, CreatePlanOutputDTO } from '../dtos';
@@ -73,6 +73,7 @@ export class CreatePlanUseCase {
       new PlanId(planId),
       planData.schemaVersion || '1.0.0',
       planData.planType as PlanType,
+      PlanStatus.ACTIVE, // Plans created via the old API are automatically active
       metadata,
       planDetails,
       steps,
