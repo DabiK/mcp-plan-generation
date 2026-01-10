@@ -214,13 +214,17 @@ export const MCP_TOOLS = [
                 type: 'string',
                 description: 'Absolute file path (must start with /)',
               },
+              purpose: {
+                type: 'string',
+                description: 'Why this file is relevant to the plan (preferred)',
+              },
               title: {
                 type: 'string',
-                description: 'Optional file title',
+                description: 'Optional file title (accepted for backward compatibility)',
               },
               summary: {
                 type: 'string',
-                description: 'Optional file summary',
+                description: 'Optional file summary (accepted for backward compatibility)',
               },
               lastModified: {
                 type: 'string',

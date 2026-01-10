@@ -99,7 +99,10 @@ export class ContextValidator {
   private isContextObject(obj: unknown): obj is {
     files: Array<{
       path: string;
-      purpose: string;
+      purpose?: string;
+      title?: string;
+      summary?: string;
+      lastModified?: string;
       references?: Array<{
         lineStart?: number;
         lineEnd?: number;

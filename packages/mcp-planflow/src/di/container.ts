@@ -18,19 +18,10 @@ import { DependencyGraphService } from '../domain/services/DependencyGraphServic
 import { BusinessRulesValidator } from '../domain/services/BusinessRulesValidator';
 import { PlanManagementService } from '../domain/services/PlanManagementService';
 import { GetPlanFormatUseCase } from '../application/use-cases/GetPlanFormatUseCase';
-import { CreatePlanUseCase } from '../application/use-cases/CreatePlanUseCase';
-import { GetPlanUseCase } from '../application/use-cases/GetPlanUseCase';
-import { ListPlansUseCase } from '../application/use-cases/ListPlansUseCase';
 import { StepNavigationUseCases } from '../application/use-cases/StepNavigationUseCases';
 import { PatchPlanElementsUseCase } from '../application/use-cases/PatchPlanElementsUseCase';
 import { SetPlanContextUseCase } from '../application/use-cases/SetPlanContextUseCase';
 import { GetPlanContextUseCase } from '../application/use-cases/GetPlanContextUseCase';
-import { CreatePlanDraftUseCase } from '../application/use-cases/CreatePlanDraftUseCase';
-import { AddStepToPlanUseCase } from '../application/use-cases/AddStepToPlanUseCase';
-import { UpdateStepInPlanUseCase } from '../application/use-cases/UpdateStepInPlanUseCase';
-import { RemoveStepFromPlanUseCase } from '../application/use-cases/RemoveStepFromPlanUseCase';
-import { UpdatePlanMetadataUseCase } from '../application/use-cases/UpdatePlanMetadataUseCase';
-import { FinalizePlanUseCase } from '../application/use-cases/FinalizePlanUseCase';
 import { DeletePlanContextUseCase } from '../application/use-cases/DeletePlanContextUseCase';
 import { PlanContextRepository } from '../infrastructure/database/repositories/PlanContextRepository';
 import { McpServer } from '../infrastructure/mcp/McpServer';
@@ -42,6 +33,7 @@ export function setupContainer(): void {
   
   // Database & Persistence
   container.registerSingleton(MongoDBConnection);
+  container.registerSingleton(MongoDBPlanRepository);
   
   // Validators (Infrastructure)
   container.registerSingleton(MermaidValidator);
@@ -56,7 +48,6 @@ export function setupContainer(): void {
   // Domain Services
   container.registerSingleton(DependencyGraphService);
   container.registerSingleton(BusinessRulesValidator);
-  container.registerSingleton(PlanManagementService);
   
   // ========== Application Layer - Ports Out (Implemented by Infrastructure) ==========
   
@@ -93,23 +84,15 @@ export function setupContainer(): void {
     useClass: PlanManagementService,
   });
 
-  // ========== Legacy Use Cases (À décommissionner progressivement) ==========
+  // ========== MCP-Specific Use Cases ==========
+  // These provide MCP-only features not covered by ports (navigation by index, context files, partial patches)
   
   container.registerSingleton(GetPlanFormatUseCase);
-  container.registerSingleton(CreatePlanUseCase);
-  container.registerSingleton(GetPlanUseCase);
   container.registerSingleton(PatchPlanElementsUseCase);
-  container.registerSingleton(ListPlansUseCase);
   container.registerSingleton(StepNavigationUseCases);
   container.registerSingleton(SetPlanContextUseCase);
   container.registerSingleton(GetPlanContextUseCase);
   container.registerSingleton(DeletePlanContextUseCase);
-  container.registerSingleton(CreatePlanDraftUseCase);
-  container.registerSingleton(AddStepToPlanUseCase);
-  container.registerSingleton(UpdateStepInPlanUseCase);
-  container.registerSingleton(RemoveStepFromPlanUseCase);
-  container.registerSingleton(UpdatePlanMetadataUseCase);
-  container.registerSingleton(FinalizePlanUseCase);
   
   // ========== Infrastructure - Servers ==========
   

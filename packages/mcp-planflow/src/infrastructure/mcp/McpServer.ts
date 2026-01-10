@@ -81,7 +81,7 @@ export class McpServer {
 
           case 'plan-context-format':
             return await this.handleGetContextFormat(request.params.arguments);
-            
+
           case 'plans-get':
             return await this.handleGetPlan(request.params.arguments);
 
@@ -93,9 +93,6 @@ export class McpServer {
 
           case 'steps-get':
             return await this.handleStepsGet(request.params.arguments);
-
-          case 'steps-context':
-            return await this.handleStepsContext(request.params.arguments);
 
           case 'plan-context-set':
             return await this.handleSetPlanContext(request.params.arguments);
@@ -321,36 +318,6 @@ export class McpServer {
 
     if (!result) {
       throw new McpError(ErrorCode.InvalidRequest, 'Step not found');
-    }
-
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: JSON.stringify(result, null, 2),
-        },
-      ],
-    };
-  }
-
-  private async handleStepsContext(args: any) {
-    if (!args?.planId || !args?.stepId) {
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        'Missing required parameters: planId and stepId'
-      );
-    }
-
-    const result = await this.stepNavigationUseCases.getStepContext(
-      args.planId,
-      args.stepId
-    );
-
-    if (!result) {
-      throw new McpError(
-        ErrorCode.InvalidRequest,
-        `Step not found with id: ${args.stepId}`
-      );
     }
 
     return {

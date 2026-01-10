@@ -3,7 +3,7 @@ import { IPlanRepository } from '../../domain/repositories/IPlanRepository';
 import { PlanId } from '../../domain/value-objects/PlanId';
 import { Step } from '../../domain/entities/Step';
 import { StepStatus } from '../../domain/value-objects/StepStatus';
-import { StepDTO, StepWithStatusDTO, StepStatusDTO, StepContextDTO } from '../dtos';
+import { StepDTO, StepWithStatusDTO, StepStatusDTO } from '../dtos';
 
 @injectable()
 export class StepNavigationUseCases {
@@ -110,46 +110,6 @@ export class StepNavigationUseCases {
   async getStepActions(planIdString: string, stepId: string): Promise<any[] | null> {
     const step = await this.getStepById(planIdString, stepId);
     return step ? step.actions : null;
-  }
-
-  /**
-   * Get step context: current step + dependencies + next steps
-   */
-  async getStepContext(planIdString: string, stepId: string): Promise<StepContextDTO | null> {
-    const planId = new PlanId(planIdString);
-    const plan = await this.planRepository.findById(planId);
-    
-    if (!plan) {
-      return null;
-    }
-
-    const currentStep = plan.steps.find((s: Step) => s.id.getValue() === stepId);
-    
-    if (!currentStep) {
-      return null;
-    }
-
-    // Get dependencies (steps that this step depends on)
-    const dependencies: StepWithStatusDTO[] = [];
-    if (currentStep.dependsOn && currentStep.dependsOn.length > 0) {
-      for (const depId of currentStep.dependsOn) {
-        const depStep = plan.steps.find((s: Step) => s.id.equals(depId));
-        if (depStep) {
-          dependencies.push(this.toStepWithStatusDTO(depStep));
-        }
-      }
-    }
-
-    // Get next steps (steps that depend on this step)
-    const nextSteps: StepWithStatusDTO[] = plan.steps
-      .filter((s: Step) => s.dependsOn?.some((d) => d.getValue() === stepId))
-      .map((s: Step) => this.toStepWithStatusDTO(s));
-
-    return {
-      currentStep: this.toStepWithStatusDTO(currentStep),
-      dependencies,
-      nextSteps
-    };
   }
 
   /**

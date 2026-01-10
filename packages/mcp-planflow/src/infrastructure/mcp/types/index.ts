@@ -6,10 +6,6 @@
 // Incremental workflow types
 export { CreatePlanDraftMcpInput } from './CreatePlanDraftMcpInput';
 export { AddStepToPlanMcpInput } from './AddStepToPlanMcpInput';
-export { UpdateStepInPlanMcpInput } from './UpdateStepInPlanMcpInput';
-export { RemoveStepFromPlanMcpInput } from './RemoveStepFromPlanMcpInput';
-export { UpdatePlanMetadataMcpInput } from './UpdatePlanMetadataMcpInput';
-export { FinalizePlanMcpInput } from './FinalizePlanMcpInput';
 
 // Shared DTOs
 export { StepMcpInputDTO } from './StepMcpInputDTO';

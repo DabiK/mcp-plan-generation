@@ -59,9 +59,23 @@ export function ContextTab({ planId }: { planId: string }) {
                   <ExternalLink className='w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0' />
                 </a>
 
+                {/* Title */}
+                {file.title && (
+                  <p className='text-sm font-medium text-foreground mb-1 leading-snug'>
+                    {file.title}
+                  </p>
+                )}
+
+                {/* Summary */}
+                {file.summary && (
+                  <p className='text-sm text-muted-foreground mb-3 leading-relaxed whitespace-pre-wrap break-words'>
+                    {file.summary}
+                  </p>
+                )}
+
                 {/* Purpose */}
                 {file.purpose && (
-                  <p className='text-sm text-muted-foreground mb-3 leading-relaxed'>
+                  <p className='text-sm text-muted-foreground mb-3 leading-relaxed whitespace-pre-wrap break-words'>
                     {file.purpose}
                   </p>
                 )}

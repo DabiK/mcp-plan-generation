@@ -21,7 +21,7 @@ interface PlanCommentDTO {
 export class MongoDBPlanRepository implements IPlanRepository {
   private readonly collectionName = 'plans';
 
-  constructor(private connection: MongoDBConnection) {}
+  constructor(@inject(MongoDBConnection) private connection: MongoDBConnection) {}
 
   private getCollection(): Collection<MongoDBPlanDocument> {
     return this.connection.getDb().collection<MongoDBPlanDocument>(this.collectionName);
