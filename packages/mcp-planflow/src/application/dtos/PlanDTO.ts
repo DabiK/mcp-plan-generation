@@ -95,6 +95,7 @@ export interface PlanDTO {
   planId: string;
   schemaVersion: string;
   planType: string;
+  status: string;
   metadata: {
     title: string;
     description: string;

@@ -38,7 +38,9 @@ export const planService = {
       if (res.status === 404) throw new Error('Plan not found');
       throw new Error('Failed to fetch plan');
     }
-    return res.json();
+    const data = await res.json();
+    // Backend returns { plan: Plan }, extract the plan
+    return data.plan || data;
   },
 
   async updatePlan(id: string, updates: UpdatePlanInputDTO): Promise<PlanDTO> {
@@ -52,7 +54,9 @@ export const planService = {
       const error = await res.json();
       throw new Error(error.error || 'Failed to update plan');
     }
-    return res.json();
+    const data = await res.json();
+    // Backend returns { plan: Plan }, extract the plan
+    return data.plan || data;
   },
 
   async deletePlan(id: string): Promise<void> {

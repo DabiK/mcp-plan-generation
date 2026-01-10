@@ -1,14 +1,21 @@
 import { injectable, inject } from 'tsyringe';
 import { Collection } from 'mongodb';
-import { IPlanRepository, PlanFilters } from '../../../domain/repositories/IPlanRepository';
+import { IPlanRepository, PlanFilters } from '../../../application/ports/out/IPlanRepository';
 import { Plan } from '../../../domain/entities/Plan';
 import { PlanId } from '../../../domain/value-objects/PlanId';
 import { MongoDBConnection } from './MongoDBConnection';
 import { PlanMapper, MongoDBPlanDocument } from './mappers/PlanMapper';
 import { PlanNotFoundError } from '../../../domain/errors/PlanNotFoundError';
-import { StepCommentDTO } from '../../../application/dtos/StepCommentDTO';
-import { PlanCommentDTO } from '../../../application/dtos/PlanCommentDTO';
+import { StepCommentDTO } from '../../../application/dtos/PlanDTO';
 import { StepReviewStatus } from '../../../domain/entities/Step';
+
+interface PlanCommentDTO {
+  id: string;
+  content: string;
+  author?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
 
 @injectable()
 export class MongoDBPlanRepository implements IPlanRepository {
@@ -55,10 +62,6 @@ export class MongoDBPlanRepository implements IPlanRepository {
 
     if (filters?.status) {
       query['steps.status'] = filters.status;
-    }
-
-    if (filters?.planId) {
-      query.planId = filters.planId;
     }
 
     if (filters?.search) {
@@ -161,7 +164,7 @@ export class MongoDBPlanRepository implements IPlanRepository {
         },
         {
           $pull: {
-            'steps.$.comments': { id: commentId }
+            'steps.$.comments': { $or: [{ id: commentId }, { _id: commentId }] }
           }
         }
       );
@@ -200,76 +203,6 @@ export class MongoDBPlanRepository implements IPlanRepository {
       return result.modifiedCount > 0;
     } catch (error) {
       console.error('Error updating step comment:', error);
-      return false;
-    }
-  }
-
-  async addPlanComment(planId: string, comment: PlanCommentDTO): Promise<boolean> {
-    try {
-      const collection = this.getCollection();
-      
-      const result = await collection.updateOne(
-        { planId },
-        {
-          $push: {
-            comments: {
-              id: comment.id,
-              content: comment.content,
-              author: comment.author,
-              createdAt: new Date(comment.createdAt),
-              updatedAt: comment.updatedAt ? new Date(comment.updatedAt) : undefined,
-            }
-          }
-        }
-      );
-
-      return result.modifiedCount > 0;
-    } catch (error) {
-      console.error('Error adding plan comment:', error);
-      return false;
-    }
-  }
-
-  async deletePlanComment(planId: string, commentId: string): Promise<boolean> {
-    try {
-      const collection = this.getCollection();
-      
-      const result = await collection.updateOne(
-        { planId },
-        {
-          $pull: {
-            comments: { id: commentId }
-          }
-        }
-      );
-
-      return result.modifiedCount > 0;
-    } catch (error) {
-      console.error('Error deleting plan comment:', error);
-      return false;
-    }
-  }
-
-  async updatePlanComment(planId: string, commentId: string, content: string): Promise<boolean> {
-    try {
-      const collection = this.getCollection();
-      
-      const result = await collection.updateOne(
-        { 
-          planId,
-          'comments.id': commentId
-        },
-        {
-          $set: {
-            'comments.$.content': content,
-            'comments.$.updatedAt': new Date(),
-          }
-        }
-      );
-
-      return result.modifiedCount > 0;
-    } catch (error) {
-      console.error('Error updating plan comment:', error);
       return false;
     }
   }
@@ -328,6 +261,81 @@ export class MongoDBPlanRepository implements IPlanRepository {
       return result.modifiedCount > 0;
     } catch (error) {
       console.error('Error setting step review status:', error);
+      return false;
+    }
+  }
+
+  // ========== Plan Comment Management ==========
+
+  async addPlanComment(planId: string, comment: any): Promise<boolean> {
+    try {
+      const collection = this.getCollection();
+      
+      const result = await collection.updateOne(
+        { planId },
+        {
+          $push: {
+            comments: {
+              id: comment.id,
+              content: comment.content,
+              author: comment.author,
+              createdAt: new Date(comment.createdAt),
+              updatedAt: comment.updatedAt ? new Date(comment.updatedAt) : undefined,
+            }
+          },
+          $set: { updatedAt: new Date() }
+        }
+      );
+
+      return result.modifiedCount > 0;
+    } catch (error) {
+      console.error('Error adding plan comment:', error);
+      return false;
+    }
+  }
+
+  async updatePlanComment(planId: string, commentId: string, content: string): Promise<boolean> {
+    try {
+      const collection = this.getCollection();
+      
+      const result = await collection.updateOne(
+        { 
+          planId,
+          'comments.id': commentId
+        },
+        {
+          $set: {
+            'comments.$.content': content,
+            'comments.$.updatedAt': new Date(),
+            updatedAt: new Date()
+          }
+        }
+      );
+
+      return result.modifiedCount > 0;
+    } catch (error) {
+      console.error('Error updating plan comment:', error);
+      return false;
+    }
+  }
+
+  async deletePlanComment(planId: string, commentId: string): Promise<boolean> {
+    try {
+      const collection = this.getCollection();
+      
+      const result = await collection.updateOne(
+        { planId },
+        {
+          $pull: {
+            comments: { $or: [{ id: commentId }, { _id: commentId }] }
+          },
+          $set: { updatedAt: new Date() }
+        }
+      );
+
+      return result.modifiedCount > 0;
+    } catch (error) {
+      console.error('Error deleting plan comment:', error);
       return false;
     }
   }

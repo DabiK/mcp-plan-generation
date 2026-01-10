@@ -7,33 +7,26 @@ import {
   McpError,
 } from '@modelcontextprotocol/sdk/types.js';
 import { injectable, inject } from 'tsyringe';
+import { Plan } from '../../domain/entities/Plan';
 import {
-  ValidatePlanUseCase,
-  CreatePlanUseCase,
-  GetPlanUseCase,
+  // Keep only non-plan-management use cases
   GetPlanFormatUseCase,
-  UpdatePlanUseCase,
-  ListPlansUseCase,
-  AddStepCommentUseCase,
-  DeleteStepCommentUseCase,
-  UpdateStepCommentUseCase,
   StepNavigationUseCases,
-  AddPlanCommentUseCase,
-  UpdatePlanCommentUseCase,
-  DeletePlanCommentUseCase,
-  GetPlanCommentsUseCase,
   SetPlanContextUseCase,
   GetPlanContextUseCase,
   DeletePlanContextUseCase,
-  CreatePlanDraftUseCase,
-  AddStepToPlanUseCase,
-  UpdateStepInPlanUseCase,
-  RemoveStepFromPlanUseCase,
-  UpdatePlanMetadataUseCase,
-  FinalizePlanUseCase,
 } from '../../application/use-cases';
 import { PatchPlanElementsUseCase } from '../../application/use-cases/PatchPlanElementsUseCase';
 import { MCP_TOOLS } from './mcp-tools-definitions';
+
+// Import Ports In for hexagonal architecture
+import { 
+  IPlanCreation, 
+  IPlanRetrieval, 
+  IStepManagement, 
+  IPlanModification 
+} from '../../application/ports/in';
+import { DTOMapper } from '../mappers/DTOMapper';
 
 // MCP Input Types (Infrastructure layer)
 import { CreatePlanDraftMcpInput, AddStepToPlanMcpInput, StepMcpInputDTO } from './types';
@@ -43,30 +36,20 @@ export class McpServer {
   private server: Server;
 
   constructor(
-    private validatePlanUseCase: ValidatePlanUseCase,
-    private createPlanUseCase: CreatePlanUseCase,
-    private getPlanUseCase: GetPlanUseCase,
-    private getPlanFormatUseCase: GetPlanFormatUseCase,
-    private updatePlanUseCase: UpdatePlanUseCase,
-    private listPlansUseCase: ListPlansUseCase,
-    private addStepCommentUseCase: AddStepCommentUseCase,
-    private deleteStepCommentUseCase: DeleteStepCommentUseCase,
-    private updateStepCommentUseCase: UpdateStepCommentUseCase,
+    // Hexagonal architecture: inject Ports In instead of individual use cases
+    @inject('IPlanCreation') private planCreation: IPlanCreation,
+    @inject('IPlanRetrieval') private planRetrieval: IPlanRetrieval,
+    @inject('IStepManagement') private stepManagement: IStepManagement,
+    @inject('IPlanModification') private planModification: IPlanModification,
+    private dtoMapper: DTOMapper,
+    
+    // Keep non-plan-management use cases
+    @inject(GetPlanFormatUseCase) private getPlanFormatUseCase: GetPlanFormatUseCase,
     @inject(StepNavigationUseCases) private stepNavigationUseCases: StepNavigationUseCases,
-    @inject(AddPlanCommentUseCase) private addPlanCommentUseCase: AddPlanCommentUseCase,
-    @inject(UpdatePlanCommentUseCase) private updatePlanCommentUseCase: UpdatePlanCommentUseCase,
-    @inject(DeletePlanCommentUseCase) private deletePlanCommentUseCase: DeletePlanCommentUseCase,
-    @inject(GetPlanCommentsUseCase) private getPlanCommentsUseCase: GetPlanCommentsUseCase,
     @inject(PatchPlanElementsUseCase) private patchPlanElementsUseCase: PatchPlanElementsUseCase,
     @inject(SetPlanContextUseCase) private setPlanContextUseCase: SetPlanContextUseCase,
     @inject(GetPlanContextUseCase) private getPlanContextUseCase: GetPlanContextUseCase,
-    @inject(DeletePlanContextUseCase) private deletePlanContextUseCase: DeletePlanContextUseCase,
-    @inject(CreatePlanDraftUseCase) private createPlanDraftUseCase: CreatePlanDraftUseCase,
-    @inject(AddStepToPlanUseCase) private addStepToPlanUseCase: AddStepToPlanUseCase,
-    @inject(UpdateStepInPlanUseCase) private updateStepInPlanUseCase: UpdateStepInPlanUseCase,
-    @inject(RemoveStepFromPlanUseCase) private removeStepFromPlanUseCase: RemoveStepFromPlanUseCase,
-    @inject(UpdatePlanMetadataUseCase) private updatePlanMetadataUseCase: UpdatePlanMetadataUseCase,
-    @inject(FinalizePlanUseCase) private finalizePlanUseCase: FinalizePlanUseCase
+    @inject(DeletePlanContextUseCase) private deletePlanContextUseCase: DeletePlanContextUseCase
   ) {
     this.server = new Server(
       {
@@ -96,21 +79,11 @@ export class McpServer {
           case 'plans-format':
             return await this.handleGetPlanFormat(request.params.arguments);
 
-          case 'plans-validate':
-            return await this.handleValidatePlan(request.params.arguments);
-
           case 'plan-context-format':
             return await this.handleGetContextFormat(request.params.arguments);
-
-          // TEMPORARILY DISABLED - Use new incremental workflow instead
-          // case 'plans-create':
-          //   return await this.handleCreatePlan(request.params.arguments);
-
+            
           case 'plans-get':
             return await this.handleGetPlan(request.params.arguments);
-
-          case 'plans-update':
-            return await this.handleUpdatePlan(request.params.arguments);
 
           case 'plans-patch':
             return await this.handlePatchPlan(request.params.arguments);
@@ -121,14 +94,8 @@ export class McpServer {
           case 'steps-get':
             return await this.handleStepsGet(request.params.arguments);
 
-          case 'steps-navigate':
-            return await this.handleStepsNavigate(request.params.arguments);
-
           case 'steps-context':
             return await this.handleStepsContext(request.params.arguments);
-
-          case 'comments-manage':
-            return await this.handleCommentsManage(request.params.arguments);
 
           case 'plan-context-set':
             return await this.handleSetPlanContext(request.params.arguments);
@@ -244,36 +211,9 @@ export class McpServer {
     };
   }
 
-  private async handleValidatePlan(args: any) {
-    if (!args?.plan) {
-      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: plan');
-    }
-
-    const result = await this.validatePlanUseCase.execute(args.plan);
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: JSON.stringify(result, null, 2),
-        },
-      ],
-    };
-  }
-
+  // LEGACY - Disabled in favor of incremental workflow
   private async handleCreatePlan(args: any) {
-    if (!args?.planData) {
-      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: planData');
-    }
-
-    const result = await this.createPlanUseCase.execute(args.planData);
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: JSON.stringify(result, null, 2),
-        },
-      ],
-    };
+    throw new McpError(ErrorCode.MethodNotFound, 'Use plans-create-draft instead');
   }
 
   private async handleGetPlan(args: any) {
@@ -281,34 +221,13 @@ export class McpServer {
       throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: planId');
     }
 
-    const result = await this.getPlanUseCase.execute(args.planId);
+    const result = await this.planRetrieval.getById(args.planId);
+    const planDTO = this.dtoMapper.toDTO(result.plan);
     return {
       content: [
         {
           type: 'text' as const,
-          text: JSON.stringify(result, null, 2),
-        },
-      ],
-    };
-  }
-
-  private async handleUpdatePlan(args: any) {
-    if (!args?.planId || !args?.updates) {
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        'Missing required parameters: planId and updates'
-      );
-    }
-
-    const result = await this.updatePlanUseCase.execute({
-      planId: args.planId,
-      ...args.updates,
-    });
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: JSON.stringify(result, null, 2),
+          text: JSON.stringify(planDTO, null, 2),
         },
       ],
     };
@@ -352,12 +271,13 @@ export class McpServer {
   }
 
   private async handleListPlans(args: any) {
-    const result = await this.listPlansUseCase.execute(args || {});
+    const result = await this.planRetrieval.list();
+    const plansDTO = result.plans.map((p: Plan) => this.dtoMapper.toDTO(p));
     return {
       content: [
         {
           type: 'text' as const,
-          text: JSON.stringify(result, null, 2),
+          text: JSON.stringify(plansDTO, null, 2),
         },
       ],
     };
@@ -413,53 +333,6 @@ export class McpServer {
     };
   }
 
-  private async handleStepsNavigate(args: any) {
-    if (!args?.planId || !args?.mode) {
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        'Missing required parameters: planId and mode'
-      );
-    }
-
-    const mode = args.mode as 'current' | 'next';
-    let result: any = null;
-
-    if (mode === 'current') {
-      result = await this.stepNavigationUseCases.getCurrentStep(args.planId);
-    } else if (mode === 'next') {
-      result = await this.stepNavigationUseCases.getNextStep(args.planId);
-    } else {
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        'mode must be either "current" or "next"'
-      );
-    }
-
-    if (!result) {
-      return {
-        content: [
-          {
-            type: 'text' as const,
-            text: JSON.stringify(
-              { message: 'No step available for the requested mode.' },
-              null,
-              2
-            ),
-          },
-        ],
-      };
-    }
-
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: JSON.stringify(result, null, 2),
-        },
-      ],
-    };
-  }
-
   private async handleStepsContext(args: any) {
     if (!args?.planId || !args?.stepId) {
       throw new McpError(
@@ -488,125 +361,6 @@ export class McpServer {
         },
       ],
     };
-  }
-
-  // ==================== Comments Tool ====================
-
-  private async handleCommentsManage(args: any) {
-    if (!args?.action || !args?.target || !args?.planId) {
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        'Missing required parameters: action, target, planId'
-      );
-    }
-
-    const { action, target, planId, stepId, commentId, content, author } = args;
-
-    // Plan-level comments
-    if (target === 'plan') {
-      if (action === 'get') {
-        const result = await this.getPlanCommentsUseCase.execute(planId);
-        return {
-          content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
-        };
-      } else if (action === 'add') {
-        if (!content) {
-          throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: content');
-        }
-        const result = await this.addPlanCommentUseCase.execute({ planId, content, author });
-        return {
-          content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
-        };
-      } else if (action === 'update') {
-        if (!commentId || !content) {
-          throw new McpError(
-            ErrorCode.InvalidParams,
-            'Missing required parameters: commentId and content'
-          );
-        }
-        const result = await this.updatePlanCommentUseCase.execute({
-          planId,
-          commentId,
-          content,
-        });
-        return {
-          content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
-        };
-      } else if (action === 'delete') {
-        if (!commentId) {
-          throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: commentId');
-        }
-        const result = await this.deletePlanCommentUseCase.execute({ planId, commentId });
-        return {
-          content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
-        };
-      }
-    }
-
-    // Step-level comments
-    else if (target === 'step') {
-      if (!stepId) {
-        throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: stepId');
-      }
-
-      if (action === 'get') {
-        // Get the step which includes its comments
-        const step = await this.stepNavigationUseCases.getStepById(planId, stepId);
-        if (!step) {
-          throw new McpError(ErrorCode.InvalidRequest, `Step not found with id: ${stepId}`);
-        }
-        const comments = (step as any).comments || [];
-        return {
-          content: [{ type: 'text' as const, text: JSON.stringify(comments, null, 2) }],
-        };
-      } else if (action === 'add') {
-        if (!content) {
-          throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: content');
-        }
-        const result = await this.addStepCommentUseCase.execute({
-          planId,
-          stepId,
-          content,
-          author,
-        });
-        return {
-          content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
-        };
-      } else if (action === 'update') {
-        if (!commentId || !content) {
-          throw new McpError(
-            ErrorCode.InvalidParams,
-            'Missing required parameters: commentId and content'
-          );
-        }
-        const result = await this.updateStepCommentUseCase.execute({
-          planId,
-          stepId,
-          commentId,
-          content,
-        });
-        return {
-          content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
-        };
-      } else if (action === 'delete') {
-        if (!commentId) {
-          throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: commentId');
-        }
-        const result = await this.deleteStepCommentUseCase.execute({
-          planId,
-          stepId,
-          commentId,
-        });
-        return {
-          content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
-        };
-      }
-    }
-
-    throw new McpError(
-      ErrorCode.InvalidParams,
-      'Invalid action or target. Use action: get|add|update|delete and target: plan|step'
-    );
   }
 
   // ==================== Plan Context Tools ====================
@@ -671,13 +425,14 @@ export class McpServer {
   private async handleCreatePlanDraft(args: CreatePlanDraftMcpInput) {
     // MCP schema validation already applied by server
     // Transform MCP Input → Domain Input using toDomain()
-    const result = await this.createPlanDraftUseCase.execute(args.toDomain());
+    const result = await this.planCreation.createDraft(args.toDomain());
+    const planDTO = this.dtoMapper.toDTO(result.plan);
 
     return {
       content: [
         {
           type: 'text' as const,
-          text: JSON.stringify(result, null, 2),
+          text: JSON.stringify({ planId: result.planId, plan: planDTO }, null, 2),
         },
       ],
     };
@@ -690,13 +445,14 @@ export class McpServer {
   private async handleAddStepToPlan(args: AddStepToPlanMcpInput) {
     // MCP schema validation already applied by server
     // Transform MCP Input → Domain Input using toDomain()
-    const result = await this.addStepToPlanUseCase.execute(args.toDomain());
+    const result = await this.stepManagement.addStep(args.toDomain());
+    const planDTO = this.dtoMapper.toDTO(result.plan);
 
     return {
       content: [
         {
           type: 'text' as const,
-          text: JSON.stringify(result, null, 2),
+          text: JSON.stringify({ plan: planDTO }, null, 2),
         },
       ],
     };
@@ -710,17 +466,18 @@ export class McpServer {
       );
     }
 
-    const result = await this.updateStepInPlanUseCase.execute({
+    const result = await this.stepManagement.updateStep({
       planId: args.planId,
       stepId: args.stepId,
       updates: args.updates,
     });
+    const planDTO = this.dtoMapper.toDTO(result.plan);
 
     return {
       content: [
         {
           type: 'text' as const,
-          text: JSON.stringify(result, null, 2),
+          text: JSON.stringify({ plan: planDTO }, null, 2),
         },
       ],
     };
@@ -731,17 +488,18 @@ export class McpServer {
       throw new McpError(ErrorCode.InvalidParams, 'Missing required parameters: planId, stepId');
     }
 
-    const result = await this.removeStepFromPlanUseCase.execute({
+    const result = await this.stepManagement.removeStep({
       planId: args.planId,
       stepId: args.stepId,
       mode: args.mode || 'strict',
     });
+    const planDTO = this.dtoMapper.toDTO(result.plan);
 
     return {
       content: [
         {
           type: 'text' as const,
-          text: JSON.stringify(result, null, 2),
+          text: JSON.stringify({ plan: planDTO }, null, 2),
         },
       ],
     };
@@ -752,17 +510,18 @@ export class McpServer {
       throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: planId');
     }
 
-    const result = await this.updatePlanMetadataUseCase.execute({
+    const result = await this.planModification.updateMetadata({
       planId: args.planId,
       metadata: args.metadata,
       planDetails: args.plan,
     });
+    const planDTO = this.dtoMapper.toDTO(result.plan);
 
     return {
       content: [
         {
           type: 'text' as const,
-          text: JSON.stringify(result, null, 2),
+          text: JSON.stringify({ plan: planDTO }, null, 2),
         },
       ],
     };
@@ -773,15 +532,14 @@ export class McpServer {
       throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: planId');
     }
 
-    const result = await this.finalizePlanUseCase.execute({
-      planId: args.planId,
-    });
+    const result = await this.planCreation.finalizeDraft(args.planId);
+    const planDTO = this.dtoMapper.toDTO(result.plan);
 
     return {
       content: [
         {
           type: 'text' as const,
-          text: JSON.stringify(result, null, 2),
+          text: JSON.stringify({ plan: planDTO }, null, 2),
         },
       ],
     };

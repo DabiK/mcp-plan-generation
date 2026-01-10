@@ -3,19 +3,24 @@ import { container } from 'tsyringe';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { MongoDBConnection } from '../infrastructure/persistence/mongodb/MongoDBConnection';
 import { MongoDBPlanRepository } from '../infrastructure/persistence/mongodb/MongoDBPlanRepository';
-import { IPlanRepository } from '../domain/repositories/IPlanRepository';
+import { IPlanRepository } from '../application/ports/out/IPlanRepository';
+import { IValidationPort } from '../application/ports/out/IValidationPort';
+import { IPlanCreation } from '../application/ports/in/IPlanCreation';
+import { IPlanRetrieval } from '../application/ports/in/IPlanRetrieval';
+import { IStepManagement } from '../application/ports/in/IStepManagement';
+import { IPlanModification } from '../application/ports/in/IPlanModification';
 import { PlanValidator } from '../infrastructure/validation/PlanValidator';
 import { ContextValidator } from '../infrastructure/validation/ContextValidator';
 import { MermaidValidator } from '../infrastructure/validation/MermaidValidator';
+import { ValidationPort } from '../infrastructure/validation/ValidationPort';
+import { DTOMapper } from '../infrastructure/mappers/DTOMapper';
 import { DependencyGraphService } from '../domain/services/DependencyGraphService';
+import { BusinessRulesValidator } from '../domain/services/BusinessRulesValidator';
+import { PlanManagementService } from '../domain/services/PlanManagementService';
 import { GetPlanFormatUseCase } from '../application/use-cases/GetPlanFormatUseCase';
-import { ValidatePlanUseCase } from '../application/use-cases/ValidatePlanUseCase';
 import { CreatePlanUseCase } from '../application/use-cases/CreatePlanUseCase';
 import { GetPlanUseCase } from '../application/use-cases/GetPlanUseCase';
-import { UpdatePlanUseCase } from '../application/use-cases/UpdatePlanUseCase';
 import { ListPlansUseCase } from '../application/use-cases/ListPlansUseCase';
-import { AddStepCommentUseCase, DeleteStepCommentUseCase, UpdateStepCommentUseCase } from '../application/use-cases/StepCommentUseCases';
-import { GetPlanCommentsUseCase, AddPlanCommentUseCase, UpdatePlanCommentUseCase, DeletePlanCommentUseCase } from '../application/use-cases/PlanCommentUseCases';
 import { StepNavigationUseCases } from '../application/use-cases/StepNavigationUseCases';
 import { PatchPlanElementsUseCase } from '../application/use-cases/PatchPlanElementsUseCase';
 import { SetPlanContextUseCase } from '../application/use-cases/SetPlanContextUseCase';
@@ -33,38 +38,69 @@ import { HttpServer } from '../infrastructure/http/HttpServer';
 import { McpSseHandler } from '../infrastructure/http/McpSseHandler';
 
 export function setupContainer(): void {
-  // Register infrastructure services as singletons
+  // ========== Infrastructure Layer ==========
+  
+  // Database & Persistence
   container.registerSingleton(MongoDBConnection);
+  
+  // Validators (Infrastructure)
   container.registerSingleton(MermaidValidator);
   container.registerSingleton(PlanValidator);
   container.registerSingleton(ContextValidator);
+  
+  // Mappers (Infrastructure)
+  container.registerSingleton(DTOMapper);
+  
+  // ========== Domain Layer ==========
+  
+  // Domain Services
   container.registerSingleton(DependencyGraphService);
-
-  // Register repository with interface token
+  container.registerSingleton(BusinessRulesValidator);
+  container.registerSingleton(PlanManagementService);
+  
+  // ========== Application Layer - Ports Out (Implemented by Infrastructure) ==========
+  
+  // Repository Port
   container.register<IPlanRepository>('IPlanRepository', {
     useClass: MongoDBPlanRepository,
+  });
+  
+  // Validation Port
+  container.register<IValidationPort>('IValidationPort', {
+    useClass: ValidationPort,
   });
 
   container.register('PlanContextRepository', {
     useClass: PlanContextRepository,
   });
+  
+  // ========== Application Layer - Ports In (Implemented by Domain) ==========
+  
+  // Register PlanManagementService as all Ports In implementations
+  container.register<IPlanCreation>('IPlanCreation', {
+    useClass: PlanManagementService,
+  });
+  
+  container.register<IPlanRetrieval>('IPlanRetrieval', {
+    useClass: PlanManagementService,
+  });
+  
+  container.register<IStepManagement>('IStepManagement', {
+    useClass: PlanManagementService,
+  });
+  
+  container.register<IPlanModification>('IPlanModification', {
+    useClass: PlanManagementService,
+  });
 
-  // Register application use cases
+  // ========== Legacy Use Cases (À décommissionner progressivement) ==========
+  
   container.registerSingleton(GetPlanFormatUseCase);
-  container.registerSingleton(ValidatePlanUseCase);
   container.registerSingleton(CreatePlanUseCase);
   container.registerSingleton(GetPlanUseCase);
-  container.registerSingleton(UpdatePlanUseCase);
   container.registerSingleton(PatchPlanElementsUseCase);
   container.registerSingleton(ListPlansUseCase);
-  container.registerSingleton(AddStepCommentUseCase);
-  container.registerSingleton(DeleteStepCommentUseCase);
-  container.registerSingleton(UpdateStepCommentUseCase);
   container.registerSingleton(StepNavigationUseCases);
-  container.registerSingleton(GetPlanCommentsUseCase);
-  container.registerSingleton(AddPlanCommentUseCase);
-  container.registerSingleton(UpdatePlanCommentUseCase);
-  container.registerSingleton(DeletePlanCommentUseCase);
   container.registerSingleton(SetPlanContextUseCase);
   container.registerSingleton(GetPlanContextUseCase);
   container.registerSingleton(DeletePlanContextUseCase);
@@ -74,6 +110,9 @@ export function setupContainer(): void {
   container.registerSingleton(RemoveStepFromPlanUseCase);
   container.registerSingleton(UpdatePlanMetadataUseCase);
   container.registerSingleton(FinalizePlanUseCase);
+  
+  // ========== Infrastructure - Servers ==========
+  
   container.registerSingleton(McpServer);
   
   // Register MCP Server instance for SSE
@@ -104,3 +143,4 @@ export async function bootstrapApp(): Promise<void> {
 }
 
 export { container };
+

@@ -27,11 +27,3 @@ export {
   ImplementationStateDTO,
   ImplementationInfoDTO
 } from './ImplementationDTO';
-
-export {
-  StepCommentDTO,
-  AddStepCommentInputDTO,
-  DeleteStepCommentInputDTO,
-  UpdateStepCommentInputDTO,
-  StepCommentOperationResultDTO
-} from './StepCommentDTO';

@@ -1,6 +1,7 @@
 import { SchemaProperty } from '../decorators/schema-metadata';
 import { STEP_KIND_VALUES, STEP_STATUS_VALUES } from '../mcp-schema-constants';
 import { enumToDescription } from '../schema-generator';
+import type { StepInput } from '../../../application/ports/in/IStepManagement';
 
 /**
  * MCP DTO for Step data in AddStepToPlan tool
@@ -117,10 +118,10 @@ export class StepMcpInputDTO {
   }
 
   /**
-   * Transforms MCP DTO to Domain StepDTO (used by AddStepToPlanUseCase)
-   * Returns the same structure expected by the use case
+   * Transforms MCP DTO to Domain StepInput (Port In interface)
+   * Returns the same structure expected by IStepManagement port
    */
-  toDomain(): any {
+  toDomain(): StepInput {
     return {
       id: this.id,
       title: this.title,

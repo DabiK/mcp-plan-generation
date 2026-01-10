@@ -30,6 +30,14 @@ export interface PlanDetails {
   diagrams?: Diagram[];
 }
 
+export interface PlanComment {
+  id: string;
+  content: string;
+  author: string;
+  createdAt: Date;
+  updatedAt?: Date;
+}
+
 export interface ValidationResult {
   isValid: boolean;
   errors: string[];
@@ -47,7 +55,8 @@ export class Plan {
     public steps: Step[],
     public createdAt: Date,
     public updatedAt: Date,
-    public revision: number
+    public revision: number,
+    public comments: PlanComment[] = []
   ) {}
 
   addStep(step: Step): void {
@@ -237,6 +246,30 @@ export class Plan {
     }
 
     this.status = PlanStatus.ACTIVE;
+    this.updatedAt = new Date();
+  }
+
+  addComment(comment: PlanComment): void {
+    this.comments.push(comment);
+    this.updatedAt = new Date();
+  }
+
+  updateComment(commentId: string, content: string): void {
+    const comment = this.comments.find((c) => c.id === commentId);
+    if (!comment) {
+      throw new Error(`Comment with id ${commentId} not found`);
+    }
+    comment.content = content;
+    comment.updatedAt = new Date();
+    this.updatedAt = new Date();
+  }
+
+  deleteComment(commentId: string): void {
+    const index = this.comments.findIndex((c) => c.id === commentId);
+    if (index === -1) {
+      throw new Error(`Comment with id ${commentId} not found`);
+    }
+    this.comments.splice(index, 1);
     this.updatedAt = new Date();
   }
 }

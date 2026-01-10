@@ -15,14 +15,16 @@ export class GetPlanUseCase {
     if (!plan) {
       throw new PlanNotFoundError(planId);
     }
-    const planComments = await this.repository.getPlanComments(plan.id.getValue());
-    return this.toDTO(plan, planComments);
+    
+    return this.toDTO(plan);
   }
-  private toDTO(plan: Plan, planComments: Array<{ id: string; content: string; author?: string; createdAt: string; updatedAt?: string }>): PlanDTO {
+  
+  private toDTO(plan: Plan): PlanDTO {
     return {
       planId: plan.id.getValue(),
       schemaVersion: plan.schemaVersion,
       planType: plan.planType,
+      status: plan.status,
       metadata: {
         title: plan.metadata.title,
         description: plan.metadata.description,
@@ -71,7 +73,6 @@ export class GetPlanUseCase {
       createdAt: plan.createdAt.toISOString(),
       updatedAt: plan.updatedAt.toISOString(),
       revision: plan.revision,
-      comments: planComments,
     };
   }
 }

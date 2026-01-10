@@ -1,6 +1,6 @@
 import { SchemaProperty } from '../decorators/schema-metadata';
 import { StepMcpInputDTO } from './StepMcpInputDTO';
-import type { AddStepToPlanInput } from '../../../application/use-cases/AddStepToPlanUseCase';
+import type { AddStepInput } from '../../../application/ports/in/IStepManagement';
 
 /**
  * MCP Input Type for plans-step-add tool
@@ -37,7 +37,7 @@ export class AddStepToPlanMcpInput {
    * Transforms MCP Input to Domain Input
    * Delegates step transformation to StepMcpInputDTO.toDomain()
    */
-  toDomain(): AddStepToPlanInput {
+  toDomain(): AddStepInput {
     return {
       planId: this.planId,
       step: this.step.toDomain(),

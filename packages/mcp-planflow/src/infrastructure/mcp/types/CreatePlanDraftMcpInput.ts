@@ -1,11 +1,11 @@
 import { SchemaProperty } from '../decorators/schema-metadata';
 import { PLAN_TYPE_VALUES } from '../mcp-schema-constants';
 import { enumToDescription } from '../schema-generator';
-import type { CreatePlanDraftInputDTO } from '../../../application/dtos/CreatePlanDraftDTO';
+import type { CreatePlanDraftInput } from '../../../application/ports/in/IPlanCreation';
 
 /**
  * MCP Input Type for plans-create-draft tool
- * Infrastructure layer - adapts MCP flat parameters to domain structure
+ * Infrastructure layer - adapts MCP flat parameters to Port In interface
  */
 export class CreatePlanDraftMcpInput {
   @SchemaProperty({
@@ -86,10 +86,10 @@ export class CreatePlanDraftMcpInput {
   }
 
   /**
-   * Transforms MCP Input (Infrastructure) to Domain Input (Use Case)
+   * Transforms MCP Input (Infrastructure) to Port In interface
    * This method encapsulates the mapping logic between layers
    */
-  toDomain(): CreatePlanDraftInputDTO {
+  toDomain(): CreatePlanDraftInput {
     return {
       planType: this.planType,
       metadata: {

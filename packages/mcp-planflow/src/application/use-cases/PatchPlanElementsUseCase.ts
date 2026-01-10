@@ -187,6 +187,7 @@ export class PatchPlanElementsUseCase {
       planId: plan.id.getValue(),
       schemaVersion: plan.schemaVersion,
       planType: plan.planType,
+      status: plan.status,
       metadata: {
         title: plan.metadata.title,
         description: plan.metadata.description,

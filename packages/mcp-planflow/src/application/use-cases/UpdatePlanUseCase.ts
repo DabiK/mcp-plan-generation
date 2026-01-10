@@ -41,7 +41,7 @@ export interface UpdatePlanInput {
 export class UpdatePlanUseCase {
   constructor(
     @inject('IPlanRepository') private repository: IPlanRepository,
-    private validator: PlanValidator
+    @inject('PlanValidator') private validator: PlanValidator
   ) {}
 
   async execute(input: UpdatePlanInput): Promise<PlanDTO> {
@@ -173,6 +173,7 @@ export class UpdatePlanUseCase {
       planId: plan.id.getValue(),
       schemaVersion: plan.schemaVersion,
       planType: plan.planType,
+      status: plan.status,
       metadata: {
         title: plan.metadata.title,
         description: plan.metadata.description,

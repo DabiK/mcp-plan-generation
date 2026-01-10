@@ -30,20 +30,6 @@ export const MCP_TOOLS = [
     },
   },
   {
-    name: 'plans-validate',
-    description: 'Validate a plan against schema and business rules (dependencies, cycles, unique IDs)',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        plan: {
-          type: 'object',
-          description: 'The plan object to validate',
-        },
-      },
-      required: ['plan'],
-    },
-  },
-  {
     name: 'plan-context-format',
     description: 'Get the context schema specification (v1.0.0) for plan file context',
     inputSchema: {
@@ -64,24 +50,6 @@ export const MCP_TOOLS = [
         },
       },
       required: ['planId'],
-    },
-  },
-  {
-    name: 'plans-update',
-    description: 'Update an existing plan (metadata, details, or steps)',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        planId: {
-          type: 'string',
-          description: 'The unique identifier of the plan',
-        },
-        updates: {
-          type: 'object',
-          description: 'Fields to update (metadata, plan, steps)',
-        },
-      },
-      required: ['planId', 'updates'],
     },
   },
   {
@@ -224,65 +192,6 @@ export const MCP_TOOLS = [
         },
       },
       required: ['planId', 'selector'],
-    },
-  },
-  {
-    name: 'steps-navigate',
-    description: 'Get the current or next available step (mode: "current"|"next")',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        planId: {
-          type: 'string',
-          description: 'The unique identifier of the plan',
-        },
-        mode: {
-          type: 'string',
-          enum: STEP_NAVIGATION_MODE_VALUES,
-          description: 'Navigation mode: current step being worked on or next available step',
-        },
-      },
-      required: ['planId', 'mode'],
-    },
-  },
-  {
-    name: 'comments-manage',
-    description: 'Get, add, update, or delete comments on plan or steps',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        action: {
-          type: 'string',
-          enum: COMMENT_ACTION_VALUES,
-          description: enumToDescription(COMMENT_ACTION_VALUES, 'The action to perform: '),
-        },
-        target: {
-          type: 'string',
-          enum: COMMENT_TARGET_VALUES,
-          description: enumToDescription(COMMENT_TARGET_VALUES, 'Whether to comment on: '),
-        },
-        planId: {
-          type: 'string',
-          description: 'The unique identifier of the plan',
-        },
-        stepId: {
-          type: 'string',
-          description: 'The unique identifier of the step (required when target=step)',
-        },
-        commentId: {
-          type: 'string',
-          description: 'The comment ID (required for update/delete)',
-        },
-        content: {
-          type: 'string',
-          description: 'The comment content (required for add/update)',
-        },
-        author: {
-          type: 'string',
-          description: 'The author of the comment (optional for add)',
-        },
-      },
-      required: ['action', 'target', 'planId'],
     },
   },
   {
