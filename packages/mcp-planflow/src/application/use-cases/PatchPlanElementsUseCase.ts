@@ -3,6 +3,8 @@ import { IPlanRepository } from '../../domain/repositories/IPlanRepository';
 import { PlanDTO, StepAction } from '../dtos';
 import { PlanId, StepId } from '../../domain/value-objects';
 import { PlanNotFoundError } from '../../domain/errors/PlanNotFoundError';
+import { ValidationError } from '../../domain/errors/ValidationError';
+import { MermaidValidator } from '../../infrastructure/validation/MermaidValidator';
 
 export interface PatchPlanElementsInput {
   planId: string;
@@ -20,6 +22,12 @@ export interface PatchPlanElementsInput {
     constraints?: string[];
     assumptions?: string[];
     successCriteria?: string[];
+    diagrams?: Array<{
+      title: string;
+      type: 'flowchart' | 'sequence' | 'class' | 'er' | 'gantt' | 'state';
+      content: string;
+      description?: string;
+    }>;
   };
   // Champs pour une step (utilisés uniquement si stepId est fourni)
   title?: string;
@@ -41,7 +49,8 @@ export interface PatchPlanElementsInput {
 @injectable()
 export class PatchPlanElementsUseCase {
   constructor(
-    @inject('IPlanRepository') private repository: IPlanRepository
+    @inject('IPlanRepository') private repository: IPlanRepository,
+    @inject(MermaidValidator) private mermaidValidator: MermaidValidator
   ) {}
 
   async execute(input: PatchPlanElementsInput): Promise<PlanDTO> {
@@ -106,6 +115,33 @@ export class PatchPlanElementsUseCase {
       if (input.plan.successCriteria !== undefined) {
         plan.plan.successCriteria = input.plan.successCriteria;
       }
+      if (input.plan.diagrams !== undefined) {
+        // Valider chaque diagram Mermaid avant insertion
+        for (let i = 0; i < input.plan.diagrams.length; i++) {
+          const diagram = input.plan.diagrams[i];
+          console.log(`[PatchPlanElementsUseCase] Validating diagram "${diagram.title}"...`);
+          
+          const result = await this.mermaidValidator.validate(diagram.type, diagram.content);
+          
+          if (!result.isValid) {
+            console.error(`[PatchPlanElementsUseCase] Diagram "${diagram.title}" validation failed:`, result.error);
+            throw new ValidationError(
+              `Invalid Mermaid diagram "${diagram.title}"`,
+              [result.error || 'Diagram syntax is invalid'],
+              [{
+                path: `/plan/diagrams/${i}`,
+                message: result.error || 'Invalid diagram syntax',
+                errorType: 'format',
+                actualValue: diagram.content,
+              }]
+            );
+          }
+          
+          console.log(`[PatchPlanElementsUseCase] Diagram "${diagram.title}" is valid`);
+        }
+        
+        plan.plan.diagrams = input.plan.diagrams;
+      }
     }
   }
 
@@ -151,6 +187,7 @@ export class PatchPlanElementsUseCase {
       planId: plan.id.getValue(),
       schemaVersion: plan.schemaVersion,
       planType: plan.planType,
+      status: plan.status,
       metadata: {
         title: plan.metadata.title,
         description: plan.metadata.description,

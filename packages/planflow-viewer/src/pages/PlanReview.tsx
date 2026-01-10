@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePlanDetail } from '@/hooks/usePlans';
 import { useStepReviews } from '@/hooks/useStepReviews';
-import { usePlanComments } from '@/hooks/usePlanComments';
+import { useAddPlanComment, useUpdatePlanComment, useDeletePlanComment } from '@/hooks/usePlanCommentMutations';
 import { StepReviewCard } from '@/components/review/StepReviewCard';
 import { ReviewSummaryHeader } from '@/components/review/ReviewSummaryHeader';
 import { MiniMap } from '@/components/review/MiniMap';
@@ -35,13 +35,10 @@ export function PlanReview() {
     setCurrentStepIndex,
   } = useStepReviews(id || '', plan);
 
-  const {
-    comments: planComments,
-    isLoading: commentsLoading,
-    addComment: addPlanComment,
-    updateComment: updatePlanComment,
-    deleteComment: deletePlanComment,
-  } = usePlanComments(id || '');
+  // Mutations pour les commentaires globaux - utilisent directement plan.comments
+  const addPlanCommentMutation = useAddPlanComment(id || '');
+  const updatePlanCommentMutation = useUpdatePlanComment(id || '');
+  const deletePlanCommentMutation = useDeletePlanComment(id || '');
 
   // Detect phases
   const phases = plan ? detectPhases(plan.steps) : [];
@@ -125,6 +122,7 @@ export function PlanReview() {
   };
 
   const handleAddComment = (content: string) => {
+    console.log('handleAddComment called with content:', content);
     if (currentStep) {
       addComment(currentStep.id, content);
     }
@@ -246,11 +244,17 @@ export function PlanReview() {
           {/* Plan Comments */}
           <div className="text-left">
             <PlanComments
-              comments={planComments}
-              onAddComment={addPlanComment}
-              onUpdateComment={updatePlanComment}
-              onDeleteComment={deletePlanComment}
-              isLoading={commentsLoading}
+              comments={plan?.comments || []}
+              onAddComment={(content, author) => 
+                addPlanCommentMutation.mutate({ content, author })
+              }
+              onUpdateComment={(commentId, content) => 
+                updatePlanCommentMutation.mutate({ commentId, content })
+              }
+              onDeleteComment={(commentId) => 
+                deletePlanCommentMutation.mutate(commentId)
+              }
+              isLoading={isLoading}
             />
           </div>
 
@@ -416,9 +420,9 @@ export function PlanReview() {
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
         </svg>
-        {planComments.length > 0 && (
+        {plan?.comments && plan.comments.length > 0 && (
           <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-            {planComments.length}
+            {plan.comments.length}
           </span>
         )}
       </button>
@@ -449,11 +453,17 @@ export function PlanReview() {
         
         <div className="p-4">
           <PlanComments
-            comments={planComments}
-            onAddComment={addPlanComment}
-            onUpdateComment={updatePlanComment}
-            onDeleteComment={deletePlanComment}
-            isLoading={commentsLoading}
+            comments={plan?.comments || []}
+            onAddComment={(content, author) => 
+              addPlanCommentMutation.mutate({ content, author })
+            }
+            onUpdateComment={(commentId, content) => 
+              updatePlanCommentMutation.mutate({ commentId, content })
+            }
+            onDeleteComment={(commentId) => 
+              deletePlanCommentMutation.mutate(commentId)
+            }
+            isLoading={isLoading}
           />
         </div>
       </div>

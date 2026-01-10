@@ -1,4 +1,4 @@
-import { injectable } from 'tsyringe';
+import { injectable, inject } from 'tsyringe';
 import { Collection, InsertOneResult } from 'mongodb';
 import { PlanContext } from '../../../domain/entities/PlanContext';
 import { MongoDBConnection } from '../../../infrastructure/persistence/mongodb/MongoDBConnection';
@@ -7,7 +7,7 @@ import { MongoDBConnection } from '../../../infrastructure/persistence/mongodb/M
 export class PlanContextRepository {
   private readonly collectionName = 'plan_contexts';
 
-  constructor(private connection: MongoDBConnection) {}
+  constructor(@inject(MongoDBConnection) private connection: MongoDBConnection) {}
 
   private getCollection(): Collection<PlanContext> {
     return this.connection.getDb().collection<PlanContext>(this.collectionName);

@@ -1,48 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
-import type { PlanReviewState, StepReview, StepComment, ReviewDecision, PlanDTO } from '@/types';
-import { planService } from '@/services/planService';
+import { useState, useCallback } from 'react';
+import type { PlanReviewState, StepReview, ReviewDecision, PlanDTO } from '@/types';
+import { useAddStepComment, useUpdateStepComment, useDeleteStepComment, useSetStepReviewStatus } from './useStepCommentMutations';
 
 export function useStepReviews(planId: string, plan?: PlanDTO) {
-  
+  // Mutations pour les commentaires et review status
+  const addStepCommentMutation = useAddStepComment(planId);
+  const updateStepCommentMutation = useUpdateStepComment(planId);
+  const deleteStepCommentMutation = useDeleteStepComment(planId);
+  const setReviewStatusMutation = useSetStepReviewStatus(planId);
+
+  // État local uniquement pour la navigation
   const [reviewState, setReviewState] = useState<PlanReviewState>(() => {
-    // Initialize from plan data (API) if available
-    if (plan && plan.steps) {
-      const reviewsFromDB: Record<string, StepReview> = {};
-      
-      plan.steps.forEach((step) => {
-        // Load comments and review status from API
-        const hasComments = step.comments && step.comments.length > 0;
-        const hasReviewStatus = step.reviewStatus && step.reviewStatus.decision;
-        
-        if (hasReviewStatus || hasComments) {
-          const review: any = {
-            stepId: step.id,
-            comments: step.comments?.map((c) => ({
-              id: c.id,
-              stepId: step.id,
-              content: c.content,
-              timestamp: c.createdAt,
-            })) || [],
-            timestamp: step.reviewStatus?.timestamp || new Date().toISOString(),
-          };
-
-          if (step.reviewStatus?.decision) {
-            review.decision = step.reviewStatus.decision;
-          }
-
-          reviewsFromDB[step.id] = review;
-        }
-      });
-
-      return {
-        planId,
-        reviews: reviewsFromDB,
-        currentStepIndex: 0,
-        isComplete: false,
-      };
-    }
-
-    // Default empty state if plan not loaded yet
     return {
       planId,
       reviews: {},
@@ -51,191 +19,28 @@ export function useStepReviews(planId: string, plan?: PlanDTO) {
     };
   });
 
-  // Hydrate from plan data when it becomes available
-  useEffect(() => {
-    if (plan && plan.steps) {
-      const reviewsFromDB: Record<string, StepReview> = {};
-      
-      plan.steps.forEach((step) => {
-        // Load comments and review status from API
-        const hasComments = step.comments && step.comments.length > 0;
-        const hasReviewStatus = step.reviewStatus;
-        
-        if (hasReviewStatus || hasComments) {
-          reviewsFromDB[step.id] = {
-            stepId: step.id,
-            decision: step.reviewStatus?.decision as any,
-            comments: step.comments?.map((c) => ({
-              id: c.id,
-              stepId: step.id,
-              content: c.content,
-              timestamp: c.createdAt,
-            })) || [],
-            timestamp: step.reviewStatus?.timestamp || new Date().toISOString(),
-          };
-        }
-      });
-
-      // Use API data as source of truth
-      setReviewState((prev) => ({
-        ...prev,
-        reviews: reviewsFromDB,
-      }));
-    }
-  }, [plan]);
+  // Les données sont déjà dans plan.steps[].comments et plan.steps[].reviewStatus
+  // Pas besoin de synchronisation, on lit directement depuis plan
 
   const addReview = useCallback(async (stepId: string, decision: ReviewDecision) => {
-    // Update local state immediately (optimistic update)
-    setReviewState((prev) => ({
-      ...prev,
-      reviews: {
-        ...prev.reviews,
-        [stepId]: {
-          stepId,
-          decision,
-          comments: prev.reviews[stepId]?.comments || [],
-          timestamp: new Date().toISOString(),
-        },
-      },
-    }));
-
-    // Persist to backend
-    try {
-      await planService.setStepReviewStatus(planId, stepId, decision);
-    } catch (error) {
-      console.error('Failed to persist review status:', error);
-      // State already updated optimistically, localStorage will persist it
-    }
-  }, [planId]);
+    // Appel direct à la mutation - invalide automatiquement le cache
+    return setReviewStatusMutation.mutateAsync({ stepId, decision });
+  }, [setReviewStatusMutation]);
 
   const addComment = useCallback(async (stepId: string, content: string) => {
-    try {
-      // Call backend API to persist comment
-      const result = await planService.addStepComment(planId, stepId, content);
-      
-      if (result.success && result.comment) {
-        const comment: StepComment = {
-          id: result.comment.id,
-          stepId,
-          content: result.comment.content,
-          timestamp: result.comment.createdAt,
-        };
-
-        setReviewState((prev) => {
-          const existingReview = prev.reviews[stepId];
-          // Only update comments if a review exists, don't create a new review
-          if (existingReview) {
-            return {
-              ...prev,
-              reviews: {
-                ...prev.reviews,
-                [stepId]: {
-                  ...existingReview,
-                  comments: [...existingReview.comments, comment],
-                },
-              },
-            };
-          }
-          // If no review exists, don't create one - comments are independent
-          return prev;
-        });
-      }
-    } catch (error) {
-      console.error('Failed to add comment:', error);
-    }
-  }, [planId]);
+    // Appel direct à la mutation - invalide automatiquement le cache
+    return addStepCommentMutation.mutateAsync({ stepId, content });
+  }, [addStepCommentMutation]);
 
   const deleteComment = useCallback(async (stepId: string, commentId: string) => {
-    try {
-      // Call backend API to delete comment
-      await planService.deleteStepComment(planId, stepId, commentId);
-      
-      setReviewState((prev) => {
-        const review = prev.reviews[stepId];
-        if (!review) return prev;
-
-        return {
-          ...prev,
-          reviews: {
-            ...prev.reviews,
-            [stepId]: {
-              ...review,
-              comments: review.comments.filter((c) => c.id !== commentId),
-            },
-          },
-        };
-      });
-    } catch (error) {
-      console.error('Failed to delete comment:', error);
-      // Still remove from local state on error
-      setReviewState((prev) => {
-        const review = prev.reviews[stepId];
-        if (!review) return prev;
-
-        return {
-          ...prev,
-          reviews: {
-            ...prev.reviews,
-            [stepId]: {
-              ...review,
-              comments: review.comments.filter((c) => c.id !== commentId),
-            },
-          },
-        };
-      });
-    }
-  }, [planId]);
+    // Appel direct à la mutation - invalide automatiquement le cache
+    return deleteStepCommentMutation.mutateAsync({ stepId, commentId });
+  }, [deleteStepCommentMutation]);
 
   const updateComment = useCallback(async (stepId: string, commentId: string, content: string) => {
-    try {
-      // Call backend API to update comment
-      const result = await planService.updateStepComment(planId, stepId, commentId, content);
-      
-      if (result.success) {
-        setReviewState((prev) => {
-          const review = prev.reviews[stepId];
-          if (!review) return prev;
-
-          return {
-            ...prev,
-            reviews: {
-              ...prev.reviews,
-              [stepId]: {
-                ...review,
-                comments: review.comments.map((c) =>
-                  c.id === commentId
-                    ? { ...c, content, timestamp: new Date().toISOString() }
-                    : c
-                ),
-              },
-            },
-          };
-        });
-      }
-    } catch (error) {
-      console.error('Failed to update comment:', error);
-      // Still update local state on error (optimistic update)
-      setReviewState((prev) => {
-        const review = prev.reviews[stepId];
-        if (!review) return prev;
-
-        return {
-          ...prev,
-          reviews: {
-            ...prev.reviews,
-            [stepId]: {
-              ...review,
-              comments: review.comments.map((c) =>
-                c.id === commentId
-                  ? { ...c, content, timestamp: new Date().toISOString() }
-                  : c
-              ),
-            },
-          },
-        };
-      });
-    }
-  }, [planId]);
+    // Appel direct à la mutation - invalide automatiquement le cache
+    return updateStepCommentMutation.mutateAsync({ stepId, commentId, content });
+  }, [updateStepCommentMutation]);
 
   const setCurrentStepIndex = useCallback((index: number) => {
     setReviewState((prev) => ({
@@ -274,20 +79,56 @@ export function useStepReviews(planId: string, plan?: PlanDTO) {
     });
   }, [planId]);
 
+  // Lire directement depuis plan - pas besoin d'état local
   const getStepReview = useCallback((stepId: string): StepReview | undefined => {
-    return reviewState.reviews[stepId];
-  }, [reviewState.reviews]);
+    const step = plan?.steps.find(s => s.id === stepId);
+    if (!step) return undefined;
+    
+    return {
+      stepId,
+      decision: step.reviewStatus?.decision as ReviewDecision | undefined,
+      comments: (step.comments || []).map(c => ({
+        id: c.id,
+        stepId,
+        content: c.content,
+        timestamp: c.createdAt,
+      })),
+      timestamp: step.reviewStatus?.timestamp || new Date().toISOString(),
+    };
+  }, [plan]);
 
   const getReviewStats = useCallback(() => {
-    const reviews = Object.values(reviewState.reviews);
-    return {
-      total: reviews.length,
-      approved: reviews.filter((r) => r.decision === 'approved').length,
-      rejected: reviews.filter((r) => r.decision === 'rejected').length,
-      skipped: reviews.filter((r) => r.decision === 'skipped').length,
-      commented: reviews.filter((r) => r.comments.length > 0).length,
+    if (!plan || !plan.steps) {
+      return {
+        total: 0,
+        approved: 0,
+        rejected: 0,
+        skipped: 0,
+        commented: 0,
+        pending: 0,
+      };
+    }
+
+    const stats = {
+      total: plan.steps.length,
+      approved: 0,
+      rejected: 0,
+      skipped: 0,
+      commented: 0,
+      pending: 0,
     };
-  }, [reviewState.reviews]);
+
+    plan.steps.forEach((step) => {
+      if (step.reviewStatus?.decision === 'approved') stats.approved++;
+      else if (step.reviewStatus?.decision === 'rejected') stats.rejected++;
+      else if (step.reviewStatus?.decision === 'skipped') stats.skipped++;
+      else stats.pending++;
+
+      if (step.comments && step.comments.length > 0) stats.commented++;
+    });
+
+    return stats;
+  }, [plan]);
 
   return {
     reviewState,

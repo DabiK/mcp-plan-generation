@@ -7,6 +7,7 @@ export interface DetailedValidationError {
   expectedValue?: any;
   actualValue?: any;
   schemaKeyword?: string;
+  expectedSchema?: any; // Schéma complet de la classe pour les erreurs de validation
 }
 
 export class ValidationError extends DomainError {

@@ -1,11 +1,12 @@
-import { Plan, PlanMetadata, PlanDetails, Step, Duration, Action, ValidationCriteria } from '../../../../domain/entities';
-import { PlanId, StepId, PlanType, StepKind, StepStatus } from '../../../../domain/value-objects';
+import { Plan, PlanMetadata, PlanDetails, PlanComment, Step, Duration, Action, ValidationCriteria } from '../../../../domain/entities';
+import { PlanId, StepId, PlanType, StepKind, StepStatus, PlanStatus } from '../../../../domain/value-objects';
 
 export interface MongoDBPlanDocument {
   _id?: any;
   planId: string;
   schemaVersion: string;
   planType: string;
+  status: string; // Plan status (draft, active, completed, archived)
   metadata: {
     title: string;
     description: string;
@@ -61,6 +62,13 @@ export interface MongoDBPlanDocument {
       content: string;
       description?: string;
     };
+  }>;
+  comments?: Array<{
+    id: string;
+    content: string;
+    author: string;
+    createdAt: Date;
+    updatedAt?: Date;
   }>;
   createdAt: Date;
   updatedAt: Date;
@@ -124,16 +132,26 @@ export class PlanMapper {
       })),
     };
 
+    const comments: PlanComment[] = (doc.comments || []).map(c => ({
+      id: c.id,
+      content: c.content,
+      author: c.author,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+    }));
+
     return new Plan(
       new PlanId(doc.planId),
       doc.schemaVersion,
       doc.planType as PlanType,
+      doc.status as PlanStatus, // Status doit être présent en base
       metadata,
       planDetails,
       steps,
       doc.createdAt,
       doc.updatedAt,
-      doc.revision
+      doc.revision,
+      comments
     );
   }
 
@@ -145,6 +163,7 @@ export class PlanMapper {
       planId: plan.id.getValue(),
       schemaVersion: plan.schemaVersion,
       planType: plan.planType,
+      status: plan.status,
       metadata: {
         title: plan.metadata.title,
         description: plan.metadata.description,
@@ -189,6 +208,13 @@ export class PlanMapper {
       createdAt: plan.createdAt,
       updatedAt: plan.updatedAt,
       revision: plan.revision,
+      comments: plan.comments.map(c => ({
+        id: c.id,
+        content: c.content,
+        author: c.author,
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+      })),
     };
   }
 }

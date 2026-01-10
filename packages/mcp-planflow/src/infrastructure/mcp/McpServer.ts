@@ -7,46 +7,45 @@ import {
   McpError,
 } from '@modelcontextprotocol/sdk/types.js';
 import { injectable, inject } from 'tsyringe';
+import { Plan } from '../../domain/entities/Plan';
 import {
-  ValidatePlanUseCase,
-  CreatePlanUseCase,
-  GetPlanUseCase,
+  // Keep only non-plan-management use cases
   GetPlanFormatUseCase,
-  UpdatePlanUseCase,
-  ListPlansUseCase,
-  AddStepCommentUseCase,
-  DeleteStepCommentUseCase,
-  UpdateStepCommentUseCase,
   StepNavigationUseCases,
-  AddPlanCommentUseCase,
-  UpdatePlanCommentUseCase,
-  DeletePlanCommentUseCase,
-  GetPlanCommentsUseCase,
   SetPlanContextUseCase,
   GetPlanContextUseCase,
   DeletePlanContextUseCase,
 } from '../../application/use-cases';
 import { PatchPlanElementsUseCase } from '../../application/use-cases/PatchPlanElementsUseCase';
+import { MCP_TOOLS } from './mcp-tools-definitions';
+
+// Import Ports In for hexagonal architecture
+import { 
+  IPlanCreation, 
+  IPlanRetrieval, 
+  IStepManagement, 
+  IPlanModification 
+} from '../../application/ports/in';
+import { DTOMapper } from '../mappers/DTOMapper';
+
+// MCP Input Types (Infrastructure layer)
+import { CreatePlanDraftMcpInput, AddStepToPlanMcpInput, StepMcpInputDTO } from './types';
 
 @injectable()
 export class McpServer {
   private server: Server;
 
   constructor(
-    private validatePlanUseCase: ValidatePlanUseCase,
-    private createPlanUseCase: CreatePlanUseCase,
-    private getPlanUseCase: GetPlanUseCase,
-    private getPlanFormatUseCase: GetPlanFormatUseCase,
-    private updatePlanUseCase: UpdatePlanUseCase,
-    private listPlansUseCase: ListPlansUseCase,
-    private addStepCommentUseCase: AddStepCommentUseCase,
-    private deleteStepCommentUseCase: DeleteStepCommentUseCase,
-    private updateStepCommentUseCase: UpdateStepCommentUseCase,
+    // Hexagonal architecture: inject Ports In instead of individual use cases
+    @inject('IPlanCreation') private planCreation: IPlanCreation,
+    @inject('IPlanRetrieval') private planRetrieval: IPlanRetrieval,
+    @inject('IStepManagement') private stepManagement: IStepManagement,
+    @inject('IPlanModification') private planModification: IPlanModification,
+    private dtoMapper: DTOMapper,
+    
+    // Keep non-plan-management use cases
+    @inject(GetPlanFormatUseCase) private getPlanFormatUseCase: GetPlanFormatUseCase,
     @inject(StepNavigationUseCases) private stepNavigationUseCases: StepNavigationUseCases,
-    @inject(AddPlanCommentUseCase) private addPlanCommentUseCase: AddPlanCommentUseCase,
-    @inject(UpdatePlanCommentUseCase) private updatePlanCommentUseCase: UpdatePlanCommentUseCase,
-    @inject(DeletePlanCommentUseCase) private deletePlanCommentUseCase: DeletePlanCommentUseCase,
-    @inject(GetPlanCommentsUseCase) private getPlanCommentsUseCase: GetPlanCommentsUseCase,
     @inject(PatchPlanElementsUseCase) private patchPlanElementsUseCase: PatchPlanElementsUseCase,
     @inject(SetPlanContextUseCase) private setPlanContextUseCase: SetPlanContextUseCase,
     @inject(GetPlanContextUseCase) private getPlanContextUseCase: GetPlanContextUseCase,
@@ -70,355 +69,7 @@ export class McpServer {
   private setupHandlers(): void {
     // List available tools
     this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: [
-        {
-          name: 'plans-format',
-          description: 'Get the PlanFlow schema specification (v1.1.0) with field descriptions, valid values, and examples',
-          inputSchema: {
-            type: 'object',
-            properties: {},
-            required: [],
-          },
-        },
-        {
-          name: 'plans-validate',
-          description: 'Validate a plan against schema and business rules (dependencies, cycles, unique IDs)',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              plan: {
-                type: 'object',
-                description: 'The plan object to validate',
-              },
-            },
-            required: ['plan'],
-          },
-        },
-        {
-          name: 'plan-context-format',
-          description: 'Get the context schema specification (v1.0.0) for plan file context',
-          inputSchema: {
-            type: 'object',
-            properties: {},
-            required: [],
-          },
-        },
-        {
-          name: 'plans-create',
-          description: 'Create a new implementation plan',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              planData: {
-                type: 'object',
-                description: 'Complete plan data following PlanFlow v1.1.0 schema',
-              },
-            },
-            required: ['planData'],
-          },
-        },
-        {
-          name: 'plans-get',
-          description: 'Fetch a plan by ID including all steps, step comments, and plan-level comments',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              planId: {
-                type: 'string',
-                description: 'The unique identifier of the plan',
-              },
-            },
-            required: ['planId'],
-          },
-        },
-        {
-          name: 'plans-update',
-          description: 'Update an existing plan (metadata, details, or steps)',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              planId: {
-                type: 'string',
-                description: 'The unique identifier of the plan',
-              },
-              updates: {
-                type: 'object',
-                description: 'Fields to update (metadata, plan, steps)',
-              },
-            },
-            required: ['planId', 'updates'],
-          },
-        },
-        {
-          name: 'plans-patch',
-          description: 'Atomically update any part of a plan: metadata, plan details, or a specific step. If stepId is provided, updates that step; otherwise updates plan-level fields.',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              planId: {
-                type: 'string',
-                description: 'The unique identifier of the plan',
-              },
-              stepId: {
-                type: 'string',
-                description: 'The step ID to update (optional). If provided, other step-related fields will be applied to this step.',
-              },
-              // Plan-level fields (used when stepId is NOT provided)
-              metadata: {
-                type: 'object',
-                description: 'Partial metadata updates (only when stepId is not provided)',
-                properties: {
-                  title: { type: 'string', description: 'Plan title' },
-                  description: { type: 'string', description: 'Plan description' },
-                  author: { type: 'string', description: 'Plan author' },
-                  tags: { type: 'array', items: { type: 'string' }, description: 'Plan tags' },
-                },
-              },
-              plan: {
-                type: 'object',
-                description: 'Partial plan details updates (only when stepId is not provided)',
-                properties: {
-                  objective: { type: 'string', description: 'Plan objective' },
-                  scope: { type: 'string', description: 'Plan scope' },
-                  constraints: { type: 'array', items: { type: 'string' }, description: 'Constraints' },
-                  assumptions: { type: 'array', items: { type: 'string' }, description: 'Assumptions' },
-                  successCriteria: { type: 'array', items: { type: 'string' }, description: 'Success criteria' },
-                },
-              },
-              // Step-level fields (used when stepId IS provided)
-              title: { type: 'string', description: 'Step title (only when stepId is provided)' },
-              description: { type: 'string', description: 'Step description (only when stepId is provided)' },
-              kind: { type: 'string', description: 'Step kind: task, decision, or milestone (only when stepId is provided)' },
-              status: { type: 'string', description: 'Step status: not-started, in-progress, completed, or blocked (only when stepId is provided)' },
-              dependsOn: { type: 'array', items: { type: 'string' }, description: 'Step dependencies as array of step IDs (only when stepId is provided)' },
-              estimatedDuration: { 
-                type: 'object', 
-                description: 'Estimated duration (only when stepId is provided)',
-                properties: {
-                  value: { type: 'number', description: 'Duration value' },
-                  unit: { type: 'string', description: 'Duration unit (e.g., hours, days, minutes)' },
-                },
-              },
-              actions: { 
-                type: 'array',
-                description: 'Actions to perform (only when stepId is provided). Supported types: create_file, edit_file, delete_file, run_command, test, review, documentation, custom',
-                items: {
-                  type: 'object',
-                  properties: {
-                    type: { 
-                      type: 'string',
-                      description: 'Action type: create_file, edit_file, delete_file, run_command, test, review, documentation, custom',
-                    },
-                    description: { type: 'string', description: 'Action description' },
-                    filePath: { type: 'string', description: 'File path (for file operations)' },
-                    content: { type: 'string', description: 'File content (for create_file)' },
-                    before: { type: 'string', description: 'Content before edit (for edit_file)' },
-                    after: { type: 'string', description: 'Content after edit (for edit_file)' },
-                    command: { type: 'string', description: 'Command to run (for run_command)' },
-                    testCommand: { type: 'string', description: 'Test command (for test)' },
-                    testFiles: { type: 'array', items: { type: 'string' }, description: 'Test files (for test)' },
-                    checklistItems: { type: 'array', items: { type: 'string' }, description: 'Checklist items (for review)' },
-                    sections: { type: 'array', items: { type: 'string' }, description: 'Documentation sections (for documentation)' },
-                    payload: { type: 'object', description: 'Additional custom data' },
-                  },
-                  required: ['type'],
-                },
-              },
-              validation: {
-                type: 'object',
-                description: 'Validation criteria (only when stepId is provided)',
-                properties: {
-                  criteria: { type: 'array', items: { type: 'string' } },
-                  automatedTests: { type: 'array', items: { type: 'string' } },
-                },
-              },
-            },
-            required: ['planId'],
-          },
-        },
-        {
-          name: 'plans-list',
-          description: 'List plans with optional filters (planType, status, pagination)',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              planType: {
-                type: 'string',
-                description: 'Filter by plan type',
-              },
-              status: {
-                type: 'string',
-                description: 'Filter by step status',
-              },
-              limit: {
-                type: 'number',
-                description: 'Maximum number of plans to return',
-              },
-              offset: {
-                type: 'number',
-                description: 'Number of plans to skip (pagination)',
-              },
-            },
-            required: [],
-          },
-        },
-        {
-          name: 'steps-get',
-          description: 'Get a step by ID or index with selector: { by: "id"|"index", value: string|number }',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              planId: {
-                type: 'string',
-                description: 'The unique identifier of the plan',
-              },
-              selector: {
-                type: 'object',
-                description: 'Selector to identify the step',
-                properties: {
-                  by: {
-                    type: 'string',
-                    enum: ['id', 'index'],
-                    description: 'Selection mode: by step ID or array index',
-                  },
-                  value: {
-                    description: 'The step ID (string) or index (number)',
-                  },
-                },
-                required: ['by', 'value'],
-              },
-            },
-            required: ['planId', 'selector'],
-          },
-        },
-        {
-          name: 'steps-navigate',
-          description: 'Get the current or next available step (mode: "current"|"next")',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              planId: {
-                type: 'string',
-                description: 'The unique identifier of the plan',
-              },
-              mode: {
-                type: 'string',
-                enum: ['current', 'next'],
-                description: 'Navigation mode: current step being worked on or next available step',
-              },
-            },
-            required: ['planId', 'mode'],
-          },
-        },
-        {
-          name: 'comments-manage',
-          description: 'Get, add, update, or delete comments on plan or steps',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              action: {
-                type: 'string',
-                enum: ['get', 'add', 'update', 'delete'],
-                description: 'The action to perform on the comment',
-              },
-              target: {
-                type: 'string',
-                enum: ['plan', 'step'],
-                description: 'Whether to comment on the plan or a specific step',
-              },
-              planId: {
-                type: 'string',
-                description: 'The unique identifier of the plan',
-              },
-              stepId: {
-                type: 'string',
-                description: 'The unique identifier of the step (required when target=step)',
-              },
-              commentId: {
-                type: 'string',
-                description: 'The comment ID (required for update/delete)',
-              },
-              content: {
-                type: 'string',
-                description: 'The comment content (required for add/update)',
-              },
-              author: {
-                type: 'string',
-                description: 'The author of the comment (optional for add)',
-              },
-            },
-            required: ['action', 'target', 'planId'],
-          },
-        },
-        {
-          name: 'plan-context-set',
-          description: 'Attach or update file context to a plan (list of file paths without content)',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              planId: {
-                type: 'string',
-                description: 'The unique identifier of the plan',
-              },
-              files: {
-                type: 'array',
-                description: 'List of files to attach to the plan',
-                items: {
-                  type: 'object',
-                  properties: {
-                    path: {
-                      type: 'string',
-                      description: 'Absolute file path (must start with /)',
-                    },
-                    title: {
-                      type: 'string',
-                      description: 'Optional file title',
-                    },
-                    summary: {
-                      type: 'string',
-                      description: 'Optional file summary',
-                    },
-                    lastModified: {
-                      type: 'string',
-                      description: 'Optional ISO 8601 date string',
-                    },
-                  },
-                  required: ['path'],
-                },
-              },
-            },
-            required: ['planId', 'files'],
-          },
-        },
-        {
-          name: 'plan-context-get',
-          description: 'Get the file context attached to a plan',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              planId: {
-                type: 'string',
-                description: 'The unique identifier of the plan',
-              },
-            },
-            required: ['planId'],
-          },
-        },
-        {
-          name: 'plan-context-delete',
-          description: 'Remove all file context from a plan',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              planId: {
-                type: 'string',
-                description: 'The unique identifier of the plan',
-              },
-            },
-            required: ['planId'],
-          },
-        },
-      ],
+      tools: MCP_TOOLS,
     }));
 
     // Handle tool calls
@@ -428,20 +79,11 @@ export class McpServer {
           case 'plans-format':
             return await this.handleGetPlanFormat(request.params.arguments);
 
-          case 'plans-validate':
-            return await this.handleValidatePlan(request.params.arguments);
-
           case 'plan-context-format':
             return await this.handleGetContextFormat(request.params.arguments);
 
-          case 'plans-create':
-            return await this.handleCreatePlan(request.params.arguments);
-
           case 'plans-get':
             return await this.handleGetPlan(request.params.arguments);
-
-          case 'plans-update':
-            return await this.handleUpdatePlan(request.params.arguments);
 
           case 'plans-patch':
             return await this.handlePatchPlan(request.params.arguments);
@@ -452,15 +94,6 @@ export class McpServer {
           case 'steps-get':
             return await this.handleStepsGet(request.params.arguments);
 
-          case 'steps-navigate':
-            return await this.handleStepsNavigate(request.params.arguments);
-
-          case 'steps-context':
-            return await this.handleStepsContext(request.params.arguments);
-
-          case 'comments-manage':
-            return await this.handleCommentsManage(request.params.arguments);
-
           case 'plan-context-set':
             return await this.handleSetPlanContext(request.params.arguments);
 
@@ -469,6 +102,28 @@ export class McpServer {
 
           case 'plan-context-delete':
             return await this.handleDeletePlanContext(request.params.arguments);
+
+          case 'plans-create-draft':
+            return await this.handleCreatePlanDraft(
+              CreatePlanDraftMcpInput.fromMcpArgs(request.params.arguments)
+            );
+
+          case 'plans-step-add':
+            return await this.handleAddStepToPlan(
+              AddStepToPlanMcpInput.fromMcpArgs(request.params.arguments)
+            );
+
+          case 'plans-update-step':
+            return await this.handleUpdateStepInPlan(request.params.arguments);
+
+          case 'plans-remove-step':
+            return await this.handleRemoveStepFromPlan(request.params.arguments);
+
+          case 'plans-update-metadata':
+            return await this.handleUpdatePlanMetadata(request.params.arguments);
+
+          case 'plans-finalize':
+            return await this.handleFinalizePlan(request.params.arguments);
 
           default:
             throw new McpError(
@@ -482,9 +137,33 @@ export class McpServer {
         }
         // Gérer les erreurs de validation avec détails
         if (error instanceof Error && error.name === 'ValidationError') {
+          console.log('Handling ValidationError:', error.message);
           const validationError = error as any;
+          console.log('Detailed errors:', validationError.detailedErrors);
+          
+          let errorMessage = error.message;
+          
+          // Enrichir le message avec les informations de schéma si disponibles
+          if (validationError.detailedErrors && validationError.detailedErrors.length > 0) {
+            // Chercher d'abord les erreurs avec expectedSchema (erreurs sur les objets métier)
+            let schemaError = validationError.detailedErrors.find((e: any) => e.expectedSchema);
+            console.log('Schema error found:', schemaError);
+            
+            // Si pas trouvé, prendre la première erreur de schéma
+            if (!schemaError) {
+              schemaError = validationError.detailedErrors.find((e: any) => e.errorType === 'schema');
+              console.log('Fallback schema error:', schemaError);
+            }
+            
+            if (schemaError && schemaError.expectedSchema) {
+              console.log('Adding schema to error message');
+              errorMessage += `\n\nExpected schema for ${schemaError.path}:`;
+              errorMessage += `\n${JSON.stringify(schemaError.expectedSchema, null, 2)}`;
+            }
+          }
+          
           const errorResponse: any = {
-            message: error.message,
+            message: errorMessage,
             errors: validationError.errors || [],
           };
           if (validationError.detailedErrors && validationError.detailedErrors.length > 0) {
@@ -529,36 +208,9 @@ export class McpServer {
     };
   }
 
-  private async handleValidatePlan(args: any) {
-    if (!args?.plan) {
-      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: plan');
-    }
-
-    const result = await this.validatePlanUseCase.execute(args.plan);
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: JSON.stringify(result, null, 2),
-        },
-      ],
-    };
-  }
-
+  // LEGACY - Disabled in favor of incremental workflow
   private async handleCreatePlan(args: any) {
-    if (!args?.planData) {
-      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: planData');
-    }
-
-    const result = await this.createPlanUseCase.execute(args.planData);
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: JSON.stringify(result, null, 2),
-        },
-      ],
-    };
+    throw new McpError(ErrorCode.MethodNotFound, 'Use plans-create-draft instead');
   }
 
   private async handleGetPlan(args: any) {
@@ -566,34 +218,13 @@ export class McpServer {
       throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: planId');
     }
 
-    const result = await this.getPlanUseCase.execute(args.planId);
+    const result = await this.planRetrieval.getById(args.planId);
+    const planDTO = this.dtoMapper.toDTO(result.plan);
     return {
       content: [
         {
           type: 'text' as const,
-          text: JSON.stringify(result, null, 2),
-        },
-      ],
-    };
-  }
-
-  private async handleUpdatePlan(args: any) {
-    if (!args?.planId || !args?.updates) {
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        'Missing required parameters: planId and updates'
-      );
-    }
-
-    const result = await this.updatePlanUseCase.execute({
-      planId: args.planId,
-      ...args.updates,
-    });
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: JSON.stringify(result, null, 2),
+          text: JSON.stringify(planDTO, null, 2),
         },
       ],
     };
@@ -612,7 +243,10 @@ export class McpServer {
       stepId: args.stepId,
       // Plan-level fields
       metadata: args.metadata,
-      plan: args.plan,
+      plan: args.plan ? {
+        ...args.plan,
+        diagrams: args.plan.diagrams,
+      } : undefined,
       // Step-level fields
       title: args.title,
       description: args.description,
@@ -634,12 +268,13 @@ export class McpServer {
   }
 
   private async handleListPlans(args: any) {
-    const result = await this.listPlansUseCase.execute(args || {});
+    const result = await this.planRetrieval.list();
+    const plansDTO = result.plans.map((p: Plan) => this.dtoMapper.toDTO(p));
     return {
       content: [
         {
           type: 'text' as const,
-          text: JSON.stringify(result, null, 2),
+          text: JSON.stringify(plansDTO, null, 2),
         },
       ],
     };
@@ -695,202 +330,6 @@ export class McpServer {
     };
   }
 
-  private async handleStepsNavigate(args: any) {
-    if (!args?.planId || !args?.mode) {
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        'Missing required parameters: planId and mode'
-      );
-    }
-
-    const mode = args.mode as 'current' | 'next';
-    let result: any = null;
-
-    if (mode === 'current') {
-      result = await this.stepNavigationUseCases.getCurrentStep(args.planId);
-    } else if (mode === 'next') {
-      result = await this.stepNavigationUseCases.getNextStep(args.planId);
-    } else {
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        'mode must be either "current" or "next"'
-      );
-    }
-
-    if (!result) {
-      return {
-        content: [
-          {
-            type: 'text' as const,
-            text: JSON.stringify(
-              { message: 'No step available for the requested mode.' },
-              null,
-              2
-            ),
-          },
-        ],
-      };
-    }
-
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: JSON.stringify(result, null, 2),
-        },
-      ],
-    };
-  }
-
-  private async handleStepsContext(args: any) {
-    if (!args?.planId || !args?.stepId) {
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        'Missing required parameters: planId and stepId'
-      );
-    }
-
-    const result = await this.stepNavigationUseCases.getStepContext(
-      args.planId,
-      args.stepId
-    );
-
-    if (!result) {
-      throw new McpError(
-        ErrorCode.InvalidRequest,
-        `Step not found with id: ${args.stepId}`
-      );
-    }
-
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: JSON.stringify(result, null, 2),
-        },
-      ],
-    };
-  }
-
-  // ==================== Comments Tool ====================
-
-  private async handleCommentsManage(args: any) {
-    if (!args?.action || !args?.target || !args?.planId) {
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        'Missing required parameters: action, target, planId'
-      );
-    }
-
-    const { action, target, planId, stepId, commentId, content, author } = args;
-
-    // Plan-level comments
-    if (target === 'plan') {
-      if (action === 'get') {
-        const result = await this.getPlanCommentsUseCase.execute(planId);
-        return {
-          content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
-        };
-      } else if (action === 'add') {
-        if (!content) {
-          throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: content');
-        }
-        const result = await this.addPlanCommentUseCase.execute({ planId, content, author });
-        return {
-          content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
-        };
-      } else if (action === 'update') {
-        if (!commentId || !content) {
-          throw new McpError(
-            ErrorCode.InvalidParams,
-            'Missing required parameters: commentId and content'
-          );
-        }
-        const result = await this.updatePlanCommentUseCase.execute({
-          planId,
-          commentId,
-          content,
-        });
-        return {
-          content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
-        };
-      } else if (action === 'delete') {
-        if (!commentId) {
-          throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: commentId');
-        }
-        const result = await this.deletePlanCommentUseCase.execute({ planId, commentId });
-        return {
-          content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
-        };
-      }
-    }
-
-    // Step-level comments
-    else if (target === 'step') {
-      if (!stepId) {
-        throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: stepId');
-      }
-
-      if (action === 'get') {
-        // Get the step which includes its comments
-        const step = await this.stepNavigationUseCases.getStepById(planId, stepId);
-        if (!step) {
-          throw new McpError(ErrorCode.InvalidRequest, `Step not found with id: ${stepId}`);
-        }
-        const comments = (step as any).comments || [];
-        return {
-          content: [{ type: 'text' as const, text: JSON.stringify(comments, null, 2) }],
-        };
-      } else if (action === 'add') {
-        if (!content) {
-          throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: content');
-        }
-        const result = await this.addStepCommentUseCase.execute({
-          planId,
-          stepId,
-          content,
-          author,
-        });
-        return {
-          content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
-        };
-      } else if (action === 'update') {
-        if (!commentId || !content) {
-          throw new McpError(
-            ErrorCode.InvalidParams,
-            'Missing required parameters: commentId and content'
-          );
-        }
-        const result = await this.updateStepCommentUseCase.execute({
-          planId,
-          stepId,
-          commentId,
-          content,
-        });
-        return {
-          content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
-        };
-      } else if (action === 'delete') {
-        if (!commentId) {
-          throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: commentId');
-        }
-        const result = await this.deleteStepCommentUseCase.execute({
-          planId,
-          stepId,
-          commentId,
-        });
-        return {
-          content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
-        };
-      }
-    }
-
-    throw new McpError(
-      ErrorCode.InvalidParams,
-      'Invalid action or target. Use action: get|add|update|delete and target: plan|step'
-    );
-  }
-
   // ==================== Plan Context Tools ====================
 
   private async handleSetPlanContext(args: any) {
@@ -939,6 +378,135 @@ export class McpServer {
         {
           type: 'text' as const,
           text: JSON.stringify({ success: result }, null, 2),
+        },
+      ],
+    };
+  }
+
+  // ==================== Incremental Plan Creation Handlers ====================
+
+  /**
+   * Handler for plans-create-draft tool
+   * ✅ Typed with CreatePlanDraftMcpInput and uses toDomain()
+   */
+  private async handleCreatePlanDraft(args: CreatePlanDraftMcpInput) {
+    // MCP schema validation already applied by server
+    // Transform MCP Input → Domain Input using toDomain()
+    const result = await this.planCreation.createDraft(args.toDomain());
+    const planDTO = this.dtoMapper.toDTO(result.plan);
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify({ planId: result.planId, plan: planDTO }, null, 2),
+        },
+      ],
+    };
+  }
+
+  /**
+   * Handler for plans-step-add tool
+   * ✅ Typed with AddStepToPlanMcpInput and uses toDomain()
+   */
+  private async handleAddStepToPlan(args: AddStepToPlanMcpInput) {
+    // MCP schema validation already applied by server
+    // Transform MCP Input → Domain Input using toDomain()
+    const result = await this.stepManagement.addStep(args.toDomain());
+    const planDTO = this.dtoMapper.toDTO(result.plan);
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify({ plan: planDTO }, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async handleUpdateStepInPlan(args: any) {
+    if (!args?.planId || !args?.stepId || !args?.updates) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        'Missing required parameters: planId, stepId, updates'
+      );
+    }
+
+    const result = await this.stepManagement.updateStep({
+      planId: args.planId,
+      stepId: args.stepId,
+      updates: args.updates,
+    });
+    const planDTO = this.dtoMapper.toDTO(result.plan);
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify({ plan: planDTO }, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async handleRemoveStepFromPlan(args: any) {
+    if (!args?.planId || !args?.stepId) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameters: planId, stepId');
+    }
+
+    const result = await this.stepManagement.removeStep({
+      planId: args.planId,
+      stepId: args.stepId,
+      mode: args.mode || 'strict',
+    });
+    const planDTO = this.dtoMapper.toDTO(result.plan);
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify({ plan: planDTO }, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async handleUpdatePlanMetadata(args: any) {
+    if (!args?.planId) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: planId');
+    }
+
+    const result = await this.planModification.updateMetadata({
+      planId: args.planId,
+      metadata: args.metadata,
+      planDetails: args.plan,
+    });
+    const planDTO = this.dtoMapper.toDTO(result.plan);
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify({ plan: planDTO }, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async handleFinalizePlan(args: any) {
+    if (!args?.planId) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: planId');
+    }
+
+    const result = await this.planCreation.finalizeDraft(args.planId);
+    const planDTO = this.dtoMapper.toDTO(result.plan);
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify({ plan: planDTO }, null, 2),
         },
       ],
     };

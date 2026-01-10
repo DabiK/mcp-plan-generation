@@ -18,8 +18,22 @@
           },
           "purpose": {
             "type": "string",
-            "description": "Explanation of why this file is relevant to the plan",
+            "description": "Explanation of why this file is relevant to the plan (legacy/alt field)",
             "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "description": "Optional file title",
+            "minLength": 1
+          },
+          "summary": {
+            "type": "string",
+            "description": "Optional file summary",
+            "minLength": 1
+          },
+          "lastModified": {
+            "type": "string",
+            "description": "Optional ISO 8601 date string"
           },
           "references": {
             "type": "array",
@@ -63,7 +77,7 @@
             }
           }
         },
-        "required": ["path", "purpose"],
+        "required": ["path"],
         "additionalProperties": false
       },
       "minItems": 0

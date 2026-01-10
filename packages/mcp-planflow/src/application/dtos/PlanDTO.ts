@@ -95,6 +95,7 @@ export interface PlanDTO {
   planId: string;
   schemaVersion: string;
   planType: string;
+  status: string;
   metadata: {
     title: string;
     description: string;
@@ -176,6 +177,7 @@ export interface DetailedValidationErrorDTO {
   expectedValue?: any;
   actualValue?: any;
   schemaKeyword?: string;
+  expectedSchema?: any; // Schéma complet de la classe pour les erreurs de validation
 }
 
 export interface ValidationResultDTO {

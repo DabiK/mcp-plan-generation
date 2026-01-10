@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { usePlans } from '@/hooks/usePlans';
-import { Loader2, FileText, ArrowRight, Search, Copy, Check } from 'lucide-react';
+import { usePlans, useDeletePlan } from '@/hooks/usePlans';
+import { Loader2, FileText, ArrowRight, Search, Copy, Check, Trash2 } from 'lucide-react';
 import type { PlanFilters } from '@/types';
 
 export default function PlanList() {
   const [filters, setFilters] = useState<PlanFilters>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const { data: plans, isLoading, error } = usePlans(filters);
+  const deleteMutation = useDeletePlan();
 
   const copyToClipboard = async (id: string) => {
     try {
@@ -16,6 +17,17 @@ export default function PlanList() {
       setTimeout(() => setCopiedId(null), 2000);
     } catch (err) {
       console.error('Failed to copy ID:', err);
+    }
+  };
+
+  const handleDelete = async (planId: string, planTitle: string) => {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer le plan "${planTitle}" ?`)) return;
+    
+    try {
+      await deleteMutation.mutateAsync(planId);
+      // Le plan sera automatiquement retiré de la liste grâce à React Query
+    } catch (error) {
+      alert('Erreur lors de la suppression du plan');
     }
   };
 
@@ -122,6 +134,18 @@ export default function PlanList() {
                           ) : (
                             <Copy className="w-3 h-3 text-muted-foreground hover:text-foreground" />
                           )}
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleDelete(plan.planId, plan.metadata.title);
+                          }}
+                          disabled={deleteMutation.isPending}
+                          className="p-1 hover:bg-red-50 hover:text-red-600 rounded transition-colors disabled:opacity-50"
+                          title="Supprimer le plan"
+                        >
+                          <Trash2 className="w-3 h-3" />
                         </button>
                       </div>
                     </div>
