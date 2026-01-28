@@ -4,8 +4,6 @@
 
 PlanFlow est un outil complet qui vous permet de créer, valider et reviewer des plans d'implémentation directement depuis VS Code. Grâce au **Model Context Protocol (MCP)**, dialoguez avec GitHub Copilot pour générer des plans structurés, puis utilisez l'interface web pour les reviewer visuellement.
 
-Depuis les dernières évolutions, PlanFlow propose aussi une **UI de review directement dans GitHub Copilot Chat** (MCP Apps) : vous pouvez ouvrir une vue interactive depuis l’outil MCP `plans-review-ui` sans passer par un navigateur.
-
 **✨ Pourquoi PlanFlow ?**
 - 🤖 **Intégration Copilot** : Créez des plans en langage naturel via MCP
 - 📊 **Review visuelle** : Interface web moderne avec navigation par phases
@@ -28,7 +26,6 @@ cd MCP-Plan
 Accès :
 - **Interface de review** : http://localhost:4173
 - **API REST** : http://localhost:3000
-- **Endpoint MCP (StreamableHTTP)** : http://localhost:3000/mcp
 - **MongoDB** : mongodb://localhost:27017
 
 ### Option 2 : Développement local
@@ -47,11 +44,6 @@ pnpm dev
 ```
 
 L'API tourne sur `http://localhost:3000` et l'interface sur `http://localhost:5174`.
-
-Endpoints utiles :
-- **Healthcheck** : `GET http://localhost:3000/health`
-- **MCP (StreamableHTTP)** : `GET|POST|DELETE http://localhost:3000/mcp`
-- **REST Plans** : `http://localhost:3000/api/plans`
 
 ## 🔧 Configuration VS Code avec MCP
 
@@ -147,12 +139,6 @@ Vous pouvez ensuite ouvrir l'interface web pour reviewer visuellement :
 http://localhost:4173/plans/{planId}/review
 ```
 
-Ou ouvrir la **UI intégrée dans VS Code (Copilot Chat)** :
-```
-Ouvre la review UI du plan {planId}
-```
-(Copilot exécutera l’outil `plans-review-ui`.)
-
 ### Créer un plan avec architecture complexe
 
 **Prompt :**
@@ -203,11 +189,10 @@ plans-create      Revalider
 
 ## 🎯 Fonctionnalités
 
-- **MCP Server** : 23 outils disponibles pour GitHub Copilot
-  - Gestion complète des plans (draft/finalize), patch atomique, gestion des steps
-  - Contexte de plan (attach/get/delete) pour préparer le code review
-  - Review interactive : décisions (approve/reject/skip) et commentaires step/plan
-  - **MCP Apps UI** : ouverture d’une interface de review dans Copilot Chat (tool `plans-review-ui`)
+- **MCP Server** : 10 outils disponibles pour GitHub Copilot
+  - Créer, valider, récupérer, mettre à jour des plans
+  - Navigation dans les étapes (suivant, précédent, contexte)
+  - Gestion des commentaires sur les plans et étapes
   
 - **Interface Web** :
   - Review visuelle des plans étape par étape
@@ -220,53 +205,18 @@ plans-create      Revalider
 
 ## Outils MCP disponibles
 
-### UI (MCP Apps)
-
 | Outil | Description |
 |-------|-------------|
-| `plans-review-ui` | Ouvre l’UI de review interactive dans Copilot Chat (MCP Apps) |
-
-### Plans
-
-| Outil | Description |
-|-------|-------------|
-| `plans-format` | Schéma PlanFlow avec descriptions et exemples |
-| `plans-create-draft` | Crée un plan en mode draft |
-| `plans-finalize` | Finalise un draft |
-| `plans-get` | Récupère un plan par ID |
-| `plans-list` | Liste des plans (filtres/pagination) |
-| `plans-patch` | Patch atomique plan/step (plan-level ou step-level) |
-| `plans-update-metadata` | Met à jour metadata + plan details |
-
-### Steps
-
-| Outil | Description |
-|-------|-------------|
-| `steps-get` | Récupère une étape par id/index |
-| `plans-step-add` | Ajoute une étape |
-| `plans-update-step` | Met à jour une étape |
-| `plans-remove-step` | Supprime une étape (strict/cascade) |
-
-### Contexte (préparation code review)
-
-| Outil | Description |
-|-------|-------------|
-| `plan-context-format` | Schéma de contexte attaché à un plan |
-| `plan-context-set` | Attache/maj des fichiers de contexte |
-| `plan-context-get` | Récupère le contexte |
-| `plan-context-delete` | Supprime le contexte |
-
-### Review & Commentaires
-
-| Outil | Description |
-|-------|-------------|
-| `steps-review-set` | Définir la décision de review d’une step (approved/rejected/skipped) |
-| `steps-comment-add` | Ajouter un commentaire à une step |
-| `steps-comment-update` | Mettre à jour un commentaire de step |
-| `steps-comment-delete` | Supprimer un commentaire de step |
-| `plans-comment-add` | Ajouter un commentaire au plan |
-| `plans-comment-update` | Mettre à jour un commentaire plan |
-| `plans-comment-delete` | Supprimer un commentaire plan |
+| `plans-format` | Obtenir le schéma PlanFlow v1.1.0 complet |
+| `plans-create` | Créer un nouveau plan |
+| `plans-get` | Récupérer un plan par ID |
+| `plans-update` | Mettre à jour un plan existant |
+| `plans-list` | Lister les plans avec filtres |
+| `plans-validate` | Valider un plan (schéma, cycles, etc.) |
+| `steps-get` | Récupérer une étape spécifique |
+| `steps-navigate` | Navigation (étape courante/suivante) |
+| `steps-context` | Contexte d'une étape (dépendances) |
+| `comments-manage` | Gérer les commentaires |
 
 ## Galerie d'écrans
 
@@ -294,6 +244,11 @@ Points clés de la review :
 - **Étape active** : Affichage détaillé avec commandes shell, descriptions, durée estimée
 - **Actions rapides** : Raccourcis clavier (A=Approuve, R=Rejette, S=Passe)
 - **Commentaires** : Ajout de notes directement sur les étapes
+
+### 🧩 MCP UI (Copilot Chat)
+![MCP Review UI in Copilot Chat](docs/screenshots/mcp-ui.png)
+
+Capture de l'interface de review intégrée dans GitHub Copilot Chat (MCP Apps).
 
 ### 🤖 Intégration GitHub Copilot
 ![VS Code avec review côté et Copilot Chat côté droit](docs/screenshots/preview-vscode.png)
