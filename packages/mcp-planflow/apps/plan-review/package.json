@@ -1,0 +1,16 @@
+{
+  "name": "@mcp-planflow/app-plan-review",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "INPUT=mcp-app.html vite build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.0.1"
+  },
+  "devDependencies": {
+    "typescript": "*",
+    "vite": "*",
+    "vite-plugin-singlefile": "*"
+  }
+}

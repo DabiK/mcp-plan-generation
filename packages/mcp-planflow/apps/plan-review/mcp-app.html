@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Plan Review</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --pf-border: rgba(127, 127, 127, 0.28);
+        --pf-panel: rgba(127, 127, 127, 0.08);
+        --pf-panel-2: rgba(127, 127, 127, 0.06);
+        --pf-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+        --pf-radius: 14px;
+        --pf-radius-sm: 10px;
+        --pf-muted: rgba(127, 127, 127, 0.8);
+        --pf-green: #2ea043;
+        --pf-red: #da3633;
+        --pf-amber: #d29922;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+        background: transparent;
+        overflow: hidden;
+      }
+
+      /* Layout */
+      .app {
+        height: 100%;
+        display: grid;
+        grid-template-rows: auto 1fr;
+        gap: 12px;
+        padding: calc(12px + var(--safe-top, 0px))
+          calc(12px + var(--safe-right, 0px))
+          calc(12px + var(--safe-bottom, 0px))
+          calc(12px + var(--safe-left, 0px));
+        box-sizing: border-box;
+        min-height: 0;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border: 1px solid var(--pf-border);
+        border-radius: var(--pf-radius);
+        background: var(--pf-panel);
+        padding: 10px 12px;
+        box-shadow: var(--pf-shadow);
+      }
+
+      .title {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      h1 {
+        font-size: 13px;
+        line-height: 1.2;
+        margin: 0;
+        font-weight: 650;
+      }
+
+      .meta {
+        font-size: 12px;
+        color: var(--pf-muted);
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .progress {
+        height: 8px;
+        width: 160px;
+        border-radius: 999px;
+        border: 1px solid var(--pf-border);
+        background: rgba(127, 127, 127, 0.12);
+        overflow: hidden;
+      }
+
+      .progress > div {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, rgba(46, 160, 67, 0.95), rgba(46, 160, 67, 0.55));
+      }
+
+      .content {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 12px;
+        min-height: 0;
+      }
+
+      .panel {
+        display: flex;
+        flex-direction: column;
+        border: 1px solid var(--pf-border);
+        border-radius: var(--pf-radius);
+        background: var(--pf-panel);
+        box-shadow: var(--pf-shadow);
+        min-height: 0;
+        overflow: hidden;
+      }
+
+      .panelHeader {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--pf-border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .panelHeader h2 {
+        margin: 0;
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .panelBody {
+        padding: 10px 12px;
+        overflow: auto;
+        min-height: 0;
+        flex: 1 1 auto;
+      }
+
+      button {
+        font-size: 12px;
+        padding: 6px 10px;
+        border-radius: 10px;
+        border: 1px solid var(--pf-border);
+        background: rgba(127, 127, 127, 0.12);
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .btnRow {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .pill {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--pf-border);
+        opacity: 0.95;
+        white-space: nowrap;
+      }
+
+      .pill.ok {
+        border-color: rgba(46, 160, 67, 0.5);
+        background: rgba(46, 160, 67, 0.15);
+      }
+      .pill.warn {
+        border-color: rgba(210, 153, 34, 0.55);
+        background: rgba(210, 153, 34, 0.16);
+      }
+      .pill.bad {
+        border-color: rgba(218, 54, 51, 0.55);
+        background: rgba(218, 54, 51, 0.16);
+      }
+
+      /* Step list */
+      .stepList {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .stepItem {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        padding: 10px;
+        border-radius: var(--pf-radius-sm);
+        border: 1px solid var(--pf-border);
+        background: var(--pf-panel-2);
+        cursor: pointer;
+      }
+
+      .stepItem[aria-current="true"] {
+        outline: 2px solid rgba(80, 160, 255, 0.5);
+        border-color: rgba(80, 160, 255, 0.35);
+      }
+
+      .stepTitle {
+        font-size: 12px;
+        font-weight: 650;
+        margin: 0;
+        overflow-wrap: anywhere;
+      }
+
+      .stepMeta {
+        font-size: 11px;
+        color: var(--pf-muted);
+        margin-top: 4px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      /* Step detail */
+      .detailTitle {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 700;
+        overflow-wrap: anywhere;
+      }
+
+      .detailDesc {
+        margin: 8px 0 10px;
+        color: rgba(127, 127, 127, 0.95);
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+
+      .divider {
+        height: 1px;
+        background: var(--pf-border);
+        margin: 10px 0;
+      }
+
+      .actionCard {
+        border: 1px solid var(--pf-border);
+        border-radius: var(--pf-radius-sm);
+        background: rgba(127, 127, 127, 0.06);
+        padding: 10px;
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+      }
+
+      .actionIcon {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        border: 1px solid var(--pf-border);
+        display: grid;
+        place-items: center;
+        background: rgba(127, 127, 127, 0.12);
+        flex: 0 0 auto;
+      }
+
+      .kbd {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 11px;
+        padding: 1px 6px;
+        border-radius: 6px;
+        border: 1px solid var(--pf-border);
+        background: rgba(127, 127, 127, 0.12);
+      }
+
+      textarea, input {
+        width: 100%;
+        box-sizing: border-box;
+        font-size: 12px;
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px solid var(--pf-border);
+        background: rgba(127, 127, 127, 0.10);
+        color: inherit;
+      }
+
+      textarea {
+        min-height: 80px;
+        resize: vertical;
+      }
+
+      .comment {
+        border: 1px solid var(--pf-border);
+        border-radius: var(--pf-radius-sm);
+        background: rgba(127, 127, 127, 0.06);
+        padding: 10px;
+      }
+
+      .commentHead {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+        color: var(--pf-muted);
+        font-size: 11px;
+        margin-bottom: 6px;
+      }
+
+      .commentBody {
+        white-space: pre-wrap;
+        font-size: 12px;
+      }
+
+      .btnApprove {
+        border-color: rgba(46, 160, 67, 0.55);
+        background: rgba(46, 160, 67, 0.18);
+      }
+      .btnReject {
+        border-color: rgba(218, 54, 51, 0.55);
+        background: rgba(218, 54, 51, 0.18);
+      }
+      .btnSkip {
+        border-color: rgba(210, 153, 34, 0.55);
+        background: rgba(210, 153, 34, 0.18);
+      }
+
+      .muted {
+        color: var(--pf-muted);
+        font-size: 12px;
+      }
+
+      @media (max-width: 920px) {
+        .content {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="topbar">
+        <div class="title">
+          <h1 id="planTitle">Plan Review</h1>
+          <div class="meta">
+            <span id="meta">Waiting for tool result…</span>
+            <span class="pill" id="status">disconnected</span>
+            <span class="pill" id="kpi">0/0</span>
+            <span class="progress" aria-label="progress"><div id="progressBar"></div></span>
+          </div>
+        </div>
+        <div class="btnRow">
+          <button id="refresh" disabled>Refresh</button>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="panel">
+          <div class="panelHeader">
+            <h2>Quick Navigation</h2>
+            <span class="muted" id="stepsCount">0 steps</span>
+          </div>
+          <div class="panelBody">
+            <div class="stepList" id="stepList"></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panelHeader">
+            <h2>Step Detail</h2>
+            <div class="btnRow">
+              <button id="prevStep" disabled>Prev</button>
+              <button id="nextStep" disabled>Next</button>
+            </div>
+          </div>
+          <div class="panelBody">
+            <div id="detailEmpty" class="muted">Select a step to review.</div>
+            <div id="detail" style="display:none">
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                <h3 class="detailTitle" id="stepTitle"></h3>
+                <div class="btnRow">
+                  <button id="btnReject" class="btnReject">Reject</button>
+                  <button id="btnSkip" class="btnSkip">Skip</button>
+                  <button id="btnApprove" class="btnApprove">Approve</button>
+                </div>
+              </div>
+              <div class="stepMeta" id="stepBadges"></div>
+              <div class="detailDesc" id="stepDesc"></div>
+
+              <div class="divider"></div>
+
+              <div id="actions"></div>
+
+              <div class="divider"></div>
+
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; align-items:start;">
+                <div>
+                  <div class="muted" style="margin-bottom:6px;">Reviewer (optional)</div>
+                  <input id="reviewer" placeholder="e.g. your handle" />
+                </div>
+                <div>
+                  <div class="muted" style="margin-bottom:6px;">Add Step Comment</div>
+                  <div class="btnRow">
+                    <button id="addStepComment" disabled>Add</button>
+                  </div>
+                </div>
+              </div>
+              <div style="margin-top:8px;">
+                <textarea id="stepComment" placeholder="Write a comment about this step…"></textarea>
+              </div>
+
+              <div style="margin-top:10px;">
+                <div class="panelHeader" style="padding:0 0 8px; border:0;">
+                  <h2 style="font-size:12px;">Comments</h2>
+                  <span class="muted" id="commentsCount">0</span>
+                </div>
+                <div id="comments"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/mcp-app.ts"></script>
+  </body>
+</html>

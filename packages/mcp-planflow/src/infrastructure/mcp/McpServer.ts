@@ -4,8 +4,12 @@ import {
   CallToolRequestSchema,
   ErrorCode,
   ListToolsRequestSchema,
+  ListResourcesRequestSchema,
+  ReadResourceRequestSchema,
   McpError,
 } from '@modelcontextprotocol/sdk/types.js';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { injectable, inject } from 'tsyringe';
 import { Plan } from '../../domain/entities/Plan';
 import {
@@ -35,6 +39,14 @@ import { CreatePlanDraftMcpInput, AddStepToPlanMcpInput, StepMcpInputDTO } from 
 export class McpServer {
   private server: Server;
 
+  private static readonly PLAN_REVIEW_UI_URI = 'ui://planflow/plan-review.html';
+  private static readonly PLAN_REVIEW_UI_DIST_RELATIVE_PATH = path.join(
+    'dist',
+    'apps',
+    'plan-review',
+    'mcp-app.html'
+  );
+
   constructor(
     // Hexagonal architecture: inject Ports In instead of individual use cases
     @inject('IPlanCreation') private planCreation: IPlanCreation,
@@ -59,6 +71,7 @@ export class McpServer {
       {
         capabilities: {
           tools: {},
+          resources: {},
         },
       }
     );
@@ -67,6 +80,37 @@ export class McpServer {
   }
 
   private setupHandlers(): void {
+    // List available resources (including MCP Apps UI resources)
+    this.server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+      resources: [
+        {
+          uri: McpServer.PLAN_REVIEW_UI_URI,
+          name: 'Plan Review UI',
+          description: 'MCP App UI for reviewing plans and code inside the host chat.',
+          mimeType: 'text/html',
+        },
+      ],
+    }));
+
+    // Serve UI resources
+    this.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+      const uri = request.params.uri;
+
+      if (uri !== McpServer.PLAN_REVIEW_UI_URI) {
+        throw new McpError(ErrorCode.InvalidRequest, `Unknown resource: ${uri}`);
+      }
+
+      return {
+        contents: [
+          {
+            uri,
+            mimeType: 'text/html',
+            text: await this.getPlanReviewHtml(),
+          },
+        ],
+      };
+    });
+
     // List available tools
     this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
       tools: MCP_TOOLS,
@@ -76,6 +120,32 @@ export class McpServer {
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       try {
         switch (request.params.name) {
+          case 'plans-review-ui':
+            // For P0: reuse the existing plans-get payload as the initial tool result.
+            // The host will render the UI resource referenced in the tool metadata.
+            return await this.handleGetPlan(request.params.arguments);
+
+          case 'steps-review-set':
+            return await this.handleSetStepReviewDecision(request.params.arguments);
+
+          case 'steps-comment-add':
+            return await this.handleAddStepComment(request.params.arguments);
+
+          case 'steps-comment-update':
+            return await this.handleUpdateStepComment(request.params.arguments);
+
+          case 'steps-comment-delete':
+            return await this.handleDeleteStepComment(request.params.arguments);
+
+          case 'plans-comment-add':
+            return await this.handleAddPlanComment(request.params.arguments);
+
+          case 'plans-comment-update':
+            return await this.handleUpdatePlanComment(request.params.arguments);
+
+          case 'plans-comment-delete':
+            return await this.handleDeletePlanComment(request.params.arguments);
+
           case 'plans-format':
             return await this.handleGetPlanFormat(request.params.arguments);
 
@@ -180,6 +250,259 @@ export class McpServer {
         );
       }
     });
+  }
+
+  // ==================== Review + Comments (P2) ====================
+
+  private async handleSetStepReviewDecision(args: any) {
+    if (!args?.planId) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: planId');
+    }
+    if (!args?.stepId) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: stepId');
+    }
+    if (!args?.decision) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: decision');
+    }
+
+    const result = await this.stepManagement.setReviewStatus({
+      planId: args.planId,
+      stepId: args.stepId,
+      // NOTE: The port type currently uses status values that don't perfectly match the domain.
+      // Domain stores StepReviewStatus.decision: approved|rejected|skipped.
+      status: args.decision,
+      comment: args.reviewer,
+    } as any);
+
+    const planDTO = this.dtoMapper.toDTO(result.plan);
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify({ plan: planDTO }, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async handleAddStepComment(args: any) {
+    if (!args?.planId) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: planId');
+    }
+    if (!args?.stepId) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: stepId');
+    }
+    if (!args?.content) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: content');
+    }
+    if (!args?.author) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: author');
+    }
+
+    const comment = await this.stepManagement.addStepComment({
+      planId: args.planId,
+      stepId: args.stepId,
+      comment: {
+        content: args.content,
+        author: args.author,
+      },
+    });
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(comment, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async handleUpdateStepComment(args: any) {
+    if (!args?.planId) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: planId');
+    }
+    if (!args?.stepId) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: stepId');
+    }
+    if (!args?.commentId) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: commentId');
+    }
+    if (!args?.content) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: content');
+    }
+
+    const comment = await this.stepManagement.updateStepComment({
+      planId: args.planId,
+      stepId: args.stepId,
+      commentId: args.commentId,
+      content: args.content,
+    });
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(comment, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async handleDeleteStepComment(args: any) {
+    if (!args?.planId) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: planId');
+    }
+    if (!args?.stepId) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: stepId');
+    }
+    if (!args?.commentId) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: commentId');
+    }
+
+    await this.stepManagement.deleteStepComment({
+      planId: args.planId,
+      stepId: args.stepId,
+      commentId: args.commentId,
+    });
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify({ ok: true }, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async handleAddPlanComment(args: any) {
+    if (!args?.planId) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: planId');
+    }
+    if (!args?.content) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: content');
+    }
+    if (!args?.author) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: author');
+    }
+
+    const comment = await this.planModification.addPlanComment({
+      planId: args.planId,
+      comment: {
+        content: args.content,
+        author: args.author,
+      },
+    });
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(comment, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async handleUpdatePlanComment(args: any) {
+    if (!args?.planId) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: planId');
+    }
+    if (!args?.commentId) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: commentId');
+    }
+    if (!args?.content) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: content');
+    }
+
+    const comment = await this.planModification.updatePlanComment({
+      planId: args.planId,
+      commentId: args.commentId,
+      content: args.content,
+    });
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(comment, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async handleDeletePlanComment(args: any) {
+    if (!args?.planId) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: planId');
+    }
+    if (!args?.commentId) {
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: commentId');
+    }
+
+    await this.planModification.deletePlanComment({
+      planId: args.planId,
+      commentId: args.commentId,
+    });
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify({ ok: true }, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async getPlanReviewHtml(): Promise<string> {
+    // Prefer the bundled single-file UI if present.
+    const diskHtml = await this.tryReadPlanReviewBundledHtml();
+    if (diskHtml) return diskHtml;
+
+    // Phase P0 fallback: minimal static HTML to validate MCP Apps rendering in the host.
+    return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Plan Review</title>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; margin: 0; padding: 12px; }
+      .card { border: 1px solid rgba(0,0,0,0.12); border-radius: 10px; padding: 12px; }
+      h1 { font-size: 14px; margin: 0 0 8px; }
+      p { margin: 0 0 8px; color: rgba(0,0,0,0.72); font-size: 12px; }
+      code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12px; }
+      .muted { color: rgba(0,0,0,0.55); }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Plan Review UI (P0)</h1>
+      <p>This is a placeholder MCP App resource served from <code>${McpServer.PLAN_REVIEW_UI_URI}</code>.</p>
+      <p class="muted">UI bundle not found at <code>${McpServer.PLAN_REVIEW_UI_DIST_RELATIVE_PATH}</code>. Run the app build to enable P1.</p>
+    </div>
+  </body>
+</html>`;
+  }
+
+  private async tryReadPlanReviewBundledHtml(): Promise<string | null> {
+    // When running `node dist/index.js` from the package directory, cwd points to packages/mcp-planflow.
+    const candidatePaths = [
+      path.join(process.cwd(), McpServer.PLAN_REVIEW_UI_DIST_RELATIVE_PATH),
+      // Fallback: resolve relative to compiled file location (dist/infrastructure/mcp)
+      path.join(__dirname, '..', '..', '..', McpServer.PLAN_REVIEW_UI_DIST_RELATIVE_PATH),
+    ];
+
+    for (const candidatePath of candidatePaths) {
+      try {
+        return await fs.readFile(candidatePath, 'utf-8');
+      } catch {
+        // ignore
+      }
+    }
+
+    return null;
   }
 
   // ==================== Plans Tools ====================

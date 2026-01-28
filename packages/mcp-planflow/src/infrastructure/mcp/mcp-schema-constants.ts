@@ -22,6 +22,12 @@ export const STEP_STATUS_VALUES = [
   'blocked'
 ] as const;
 
+export const STEP_REVIEW_DECISION_VALUES = [
+  'approved',
+  'rejected',
+  'skipped'
+] as const;
+
 export const PLAN_TYPE_VALUES = [
   'feature',
   'refactor',

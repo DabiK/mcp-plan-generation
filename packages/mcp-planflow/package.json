@@ -8,7 +8,8 @@
     "mcp-planflow": "./dist/index.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "pnpm run build:app:plan-review && tsc",
+    "build:app:plan-review": "pnpm -C apps/plan-review build",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "clean": "rm -rf dist node_modules",
