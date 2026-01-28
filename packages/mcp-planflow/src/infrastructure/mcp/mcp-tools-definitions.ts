@@ -1,6 +1,7 @@
 import {
   STEP_KIND_VALUES,
   STEP_STATUS_VALUES,
+  STEP_REVIEW_DECISION_VALUES,
   PLAN_TYPE_VALUES,
   COMMENT_ACTION_VALUES,
   COMMENT_TARGET_VALUES,
@@ -18,8 +19,32 @@ import { AddStepToPlanMcpInput } from './types/AddStepToPlanMcpInput';
 const STEP_KIND_DESCRIPTION = enumToDescription(STEP_KIND_VALUES, 'Step kind: ');
 const STEP_STATUS_DESCRIPTION = enumToDescription(STEP_STATUS_VALUES, 'Step status: ');
 const PLAN_TYPE_DESCRIPTION = enumToDescription(PLAN_TYPE_VALUES, 'Type of plan: ');
+const STEP_REVIEW_DECISION_DESCRIPTION = enumToDescription(
+  STEP_REVIEW_DECISION_VALUES,
+  'Review decision: '
+);
 
 export const MCP_TOOLS = [
+  {
+    name: 'plans-review-ui',
+    description: 'Open the Plan Review MCP App UI for a given plan (VS Code will render an interactive view when supported).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        planId: {
+          type: 'string',
+          description: 'The unique identifier of the plan',
+        },
+      },
+      required: ['planId'],
+    },
+    _meta: {
+      ui: {
+        resourceUri: 'ui://planflow/plan-review.html',
+        visibility: ['model', 'app'],
+      },
+    },
+  },
   {
     name: 'plans-format',
     description: 'Get the PlanFlow schema specification (v1.1.0) with field descriptions, valid values, and examples',
@@ -192,6 +217,112 @@ export const MCP_TOOLS = [
         },
       },
       required: ['planId', 'selector'],
+    },
+  },
+  {
+    name: 'steps-review-set',
+    description: 'Set the review decision for a step (approved/rejected/skipped).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        planId: {
+          type: 'string',
+          description: 'The unique identifier of the plan',
+        },
+        stepId: {
+          type: 'string',
+          description: 'The unique identifier of the step',
+        },
+        decision: {
+          type: 'string',
+          enum: STEP_REVIEW_DECISION_VALUES,
+          description: STEP_REVIEW_DECISION_DESCRIPTION,
+        },
+        reviewer: {
+          type: 'string',
+          description: 'Optional reviewer identifier (e.g., your name/handle)',
+        },
+      },
+      required: ['planId', 'stepId', 'decision'],
+    },
+  },
+  {
+    name: 'steps-comment-add',
+    description: 'Add a comment to a step.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        planId: { type: 'string', description: 'The unique identifier of the plan' },
+        stepId: { type: 'string', description: 'The unique identifier of the step' },
+        content: { type: 'string', description: 'Comment content' },
+        author: { type: 'string', description: 'Comment author' },
+      },
+      required: ['planId', 'stepId', 'content', 'author'],
+    },
+  },
+  {
+    name: 'steps-comment-update',
+    description: 'Update an existing step comment.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        planId: { type: 'string', description: 'The unique identifier of the plan' },
+        stepId: { type: 'string', description: 'The unique identifier of the step' },
+        commentId: { type: 'string', description: 'The unique identifier of the comment' },
+        content: { type: 'string', description: 'Updated comment content' },
+      },
+      required: ['planId', 'stepId', 'commentId', 'content'],
+    },
+  },
+  {
+    name: 'steps-comment-delete',
+    description: 'Delete a step comment.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        planId: { type: 'string', description: 'The unique identifier of the plan' },
+        stepId: { type: 'string', description: 'The unique identifier of the step' },
+        commentId: { type: 'string', description: 'The unique identifier of the comment' },
+      },
+      required: ['planId', 'stepId', 'commentId'],
+    },
+  },
+  {
+    name: 'plans-comment-add',
+    description: 'Add a plan-level comment.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        planId: { type: 'string', description: 'The unique identifier of the plan' },
+        content: { type: 'string', description: 'Comment content' },
+        author: { type: 'string', description: 'Comment author' },
+      },
+      required: ['planId', 'content', 'author'],
+    },
+  },
+  {
+    name: 'plans-comment-update',
+    description: 'Update a plan-level comment.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        planId: { type: 'string', description: 'The unique identifier of the plan' },
+        commentId: { type: 'string', description: 'The unique identifier of the comment' },
+        content: { type: 'string', description: 'Updated comment content' },
+      },
+      required: ['planId', 'commentId', 'content'],
+    },
+  },
+  {
+    name: 'plans-comment-delete',
+    description: 'Delete a plan-level comment.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        planId: { type: 'string', description: 'The unique identifier of the plan' },
+        commentId: { type: 'string', description: 'The unique identifier of the comment' },
+      },
+      required: ['planId', 'commentId'],
     },
   },
   {
